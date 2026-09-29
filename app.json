@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "HomeFlow",
+    "slug": "homeflow",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#056839"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#056839"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

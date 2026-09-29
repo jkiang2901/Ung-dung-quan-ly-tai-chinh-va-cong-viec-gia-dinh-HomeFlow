@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, TrendingUp, Home } from 'lucide-react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Eye, EyeOff, TrendingUp, Home } from 'lucide-react-native';
 
 interface FamilyFundCardProps {
   balance: number;
@@ -13,57 +14,164 @@ export const FamilyFundCard: React.FC<FamilyFundCardProps> = ({ balance }) => {
   };
 
   return (
-    <div className="mx-4 my-2 relative overflow-hidden rounded-[24px] bg-gradient-to-br from-[#056839] via-[#045930] to-[#023b1f] p-5 text-white shadow-xl shadow-[#056839]/25 transition-all duration-300 hover:shadow-2xl">
-      {/* Decorative background house motif / curves */}
-      <div className="absolute -right-8 -top-8 w-40 h-40 opacity-10 pointer-events-none">
-        <Home className="w-full h-full text-white" />
-      </div>
-      <div className="absolute right-6 top-6 w-16 h-16 border-4 border-white/5 rounded-full pointer-events-none" />
+    <View style={styles.cardContainer}>
+      {/* Decorative background watermark */}
+      <View style={styles.watermark}>
+        <Home size={140} color="#FFFFFF" opacity={0.08} />
+      </View>
 
       {/* Top section: Title badge & Hide/Show toggle */}
-      <div className="flex items-center justify-between relative z-10">
-        <div className="flex items-center gap-2">
-          <span className="text-[12px] font-bold tracking-wider uppercase text-emerald-200">
-            Quỹ gia đình chung
-          </span>
-          <span className="text-[11px] font-semibold bg-emerald-400/20 text-emerald-200 px-2.5 py-0.5 rounded-full border border-emerald-400/30 backdrop-blur-sm">
-            Chính thức
-          </span>
-        </div>
+      <View style={styles.topRow}>
+        <View style={styles.badgeRow}>
+          <Text style={styles.badgeTitle}>QUỸ GIA ĐÌNH CHUNG</Text>
+          <View style={styles.officialTag}>
+            <Text style={styles.officialText}>Chính thức</Text>
+          </View>
+        </View>
 
-        <button
-          onClick={() => setShowBalance(!showBalance)}
-          className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-emerald-100 transition-colors backdrop-blur-sm"
-          title={showBalance ? "Ẩn số dư" : "Hiện số dư"}
+        <TouchableOpacity
+          onPress={() => setShowBalance(!showBalance)}
+          style={styles.eyeButton}
+          activeOpacity={0.7}
         >
-          {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-        </button>
-      </div>
+          {showBalance ? (
+            <Eye size={16} color="#A7F3D0" />
+          ) : (
+            <EyeOff size={16} color="#A7F3D0" />
+          )}
+        </TouchableOpacity>
+      </View>
 
       {/* Main Balance Display */}
-      <div className="mt-4 mb-5 relative z-10">
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-[34px] font-extrabold tracking-tight font-sans leading-none">
+      <View style={styles.balanceContainer}>
+        <View style={styles.balanceRow}>
+          <Text style={styles.balanceAmount}>
             {showBalance ? formatMoney(balance) : '••••••••'}
-          </span>
-          <span className="text-xl font-bold text-emerald-200 underline underline-offset-4 decoration-emerald-400/60">
-            đ
-          </span>
-        </div>
-      </div>
+          </Text>
+          <Text style={styles.currencySymbol}>đ</Text>
+        </View>
+      </View>
 
       {/* Bottom info stats pills */}
-      <div className="flex items-center gap-2 pt-2 border-t border-white/10 relative z-10">
-        <div className="flex items-center gap-1 bg-white/10 text-emerald-100 px-2.5 py-1 rounded-full text-[11px] font-medium backdrop-blur-sm">
-          <TrendingUp className="w-3.5 h-3.5 text-emerald-300" />
-          <span className="font-bold text-emerald-300">+12.4%</span>
-          <span className="text-emerald-100/80">so với tháng 09</span>
-        </div>
+      <View style={styles.bottomRow}>
+        <View style={styles.statPill}>
+          <TrendingUp size={14} color="#6EE7B7" />
+          <Text style={styles.statHighlight}>+12.4%</Text>
+          <Text style={styles.statSubtext}>so với tháng 09</Text>
+        </View>
 
-        <div className="bg-white/10 text-emerald-100 px-2.5 py-1 rounded-full text-[11px] font-medium backdrop-blur-sm">
-          3 nguồn đóng góp
-        </div>
-      </div>
-    </div>
+        <View style={styles.statPill}>
+          <Text style={styles.statSubtext}>3 nguồn đóng góp</Text>
+        </View>
+      </View>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  cardContainer: {
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 24,
+    backgroundColor: '#056839',
+    padding: 20,
+    position: 'relative',
+    overflow: 'hidden',
+    shadowColor: '#056839',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  watermark: {
+    position: 'absolute',
+    right: -20,
+    top: -20,
+    pointerEvents: 'none',
+  },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    zIndex: 1,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  badgeTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    color: '#A7F3D0',
+  },
+  officialTag: {
+    backgroundColor: 'rgba(52, 211, 153, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(52, 211, 153, 0.3)',
+  },
+  officialText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#A7F3D0',
+  },
+  eyeButton: {
+    padding: 6,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  balanceContainer: {
+    marginTop: 16,
+    marginBottom: 20,
+    zIndex: 1,
+  },
+  balanceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
+  },
+  balanceAmount: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
+  },
+  currencySymbol: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#A7F3D0',
+    textDecorationLine: 'underline',
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.15)',
+    zIndex: 1,
+  },
+  statPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+  },
+  statHighlight: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#6EE7B7',
+  },
+  statSubtext: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#D1FAE5',
+  },
+});

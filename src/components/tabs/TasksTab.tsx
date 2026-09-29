@@ -1,16 +1,7 @@
 import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Image, ScrollView, StyleSheet } from 'react-native';
 import type { HouseholdTask, FamilyMember } from '../../types';
-import {
-  CheckCircle2,
-  Circle,
-  Users,
-  Sparkles,
-  SlidersHorizontal,
-  CheckCircle,
-  Clock,
-  Coins,
-  ArrowRight,
-} from 'lucide-react';
+import { CheckCircle2, Circle, Clock } from 'lucide-react-native';
 
 interface TasksTabProps {
   tasks?: HouseholdTask[];
@@ -21,16 +12,8 @@ interface TasksTabProps {
 
 export const TasksTab: React.FC<TasksTabProps> = ({
   tasks = [],
-  members,
   onToggleTask,
-  onAddTask,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'todo' | 'members'>('todo');
-  const [selectedAssignee, setSelectedAssignee] = useState<string>('Mẹ Lan');
-  const [taskInput, setTaskInput] = useState<string>('');
-  const [rewardPoints, setRewardPoints] = useState<string>('+20k');
-
-  // Sample data matching the uploaded design
   const todayTasks = [
     {
       id: 'today-1',
@@ -43,13 +26,12 @@ export const TasksTab: React.FC<TasksTabProps> = ({
     },
     {
       id: 'today-2',
-      title: 'Đi siêu thị mua thực phẩ...',
+      title: 'Đi siêu thị mua thực phẩm...',
       completed: false,
       time: '17:30 chiều',
       assignedTo: 'Bố Minh',
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150',
       tag: 'Cần thiết',
-      tagColor: 'bg-blue-50 text-blue-600',
     },
   ];
 
@@ -65,27 +47,15 @@ export const TasksTab: React.FC<TasksTabProps> = ({
     },
     {
       id: 'up-2',
-      title: 'Đóng bảo hiểm sức khỏe gia đì...',
+      title: 'Đóng bảo hiểm sức khỏe gia đình...',
       completed: false,
       dateLabel: '15/11',
-      dateColor: 'text-rose-500 font-bold',
       assignedTo: 'Mẹ Lan',
       avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150',
       tag: 'Tài chính',
-      tagColor: 'bg-[#056839]/10 text-[#056839]',
-    },
-    {
-      id: 'up-3',
-      title: 'Đọc 3 cuốn sách khoa h...',
-      completed: false,
-      reward: '+30k sao',
-      assignedTo: 'Bé Bon',
-      avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=150',
-      tag: 'Học tập',
     },
   ];
 
-  // Combined stateful handlers
   const [localTodayTasks, setLocalTodayTasks] = useState(todayTasks);
   const [localUpcomingTasks, setLocalUpcomingTasks] = useState(upcomingTasks);
 
@@ -100,341 +70,229 @@ export const TasksTab: React.FC<TasksTabProps> = ({
     setLocalUpcomingTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
     );
-    onToggleTask(id);
-  };
-
-  const handleQuickCreate = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!taskInput.trim()) return;
-
-    const newTaskItem = {
-      id: `task-${Date.now()}`,
-      title: taskInput,
-      completed: false,
-      time: 'Hôm nay',
-      assignedTo: selectedAssignee,
-      avatar:
-        members.find((m) => m.name === selectedAssignee)?.avatar ||
-        'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150',
-      tag: 'Cần thiết',
-      tagColor: 'bg-emerald-50 text-emerald-700',
-    };
-
-    setLocalTodayTasks((prev) => [...prev, newTaskItem]);
-    if (onAddTask) {
-      onAddTask({
-        id: newTaskItem.id,
-        title: newTaskItem.title,
-        assignedTo: newTaskItem.assignedTo,
-        completed: false,
-        tag: 'Cần thiết',
-      });
-    }
-
-    setTaskInput('');
   };
 
   return (
-    <div className="p-4 pb-28 space-y-4 animate-in fade-in duration-300">
-      {/* 1. Top Sub-Tab Switcher Pills */}
-      <div className="p-1 bg-slate-200/70 rounded-2xl flex items-center justify-between">
-        <button
-          onClick={() => setActiveSubTab('todo')}
-          className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all ${
-            activeSubTab === 'todo'
-              ? 'bg-white text-emerald-950 shadow-sm'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <SlidersHorizontal className="w-4 h-4 text-[#056839]" />
-          <span>Việc cần làm</span>
-          <span className="w-5 h-5 rounded-full bg-emerald-100 text-[#056839] text-[11px] font-extrabold flex items-center justify-center">
-            {localTodayTasks.filter((t) => !t.completed).length + localUpcomingTasks.length + (tasks ? 0 : 0)}
-          </span>
-        </button>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Quản Lý Việc Nhà</Text>
+        <Text style={styles.subtitle}>
+          Phân công nhiệm vụ & chăm sóc tổ ấm gia đình
+        </Text>
+      </View>
 
-        <button
-          onClick={() => setActiveSubTab('members')}
-          className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all relative ${
-            activeSubTab === 'members'
-              ? 'bg-white text-emerald-950 shadow-sm'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Users className="w-4 h-4 text-indigo-600" />
-          <span>Thành viên</span>
-          <span className="w-2 h-2 rounded-full bg-amber-500 absolute top-2 right-4"></span>
-        </button>
-      </div>
-
-      {/* 2. Gamification / Family Reward Banner Card */}
-      <div className="p-5 rounded-[24px] bg-gradient-to-br from-[#056839] via-[#045930] to-[#023e20] text-white shadow-xl shadow-[#056839]/20 relative overflow-hidden">
-        {/* Subtle curved background lines */}
-        <div className="absolute right-0 top-0 w-36 h-36 bg-white/5 rounded-full blur-2xl pointer-events-none" />
-
-        <div className="flex items-center justify-between relative z-10">
-          <div>
-            <div className="flex items-center gap-1.5 text-[11px] font-bold tracking-widest uppercase text-emerald-200">
-              <span>⭐</span> GIA ĐÌNH CÙNG VUI
-            </div>
-            <h3 className="text-[17px] font-extrabold mt-1 leading-snug">
-              Hoàn thành 3 việc để thưởng trà sữa!
-            </h3>
-            <p className="text-[12px] font-semibold text-emerald-100/90 mt-1">
-              Tiến độ hôm nay: <span className="font-bold text-white">1/2 việc</span>
-            </p>
-          </div>
-
-          {/* Circular Percentage Badge */}
-          <div className="w-14 h-14 rounded-full bg-white/15 border border-white/20 backdrop-blur-md flex items-center justify-center flex-shrink-0 shadow-inner">
-            <span className="text-[15px] font-black text-white">50%</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Quick Household Task Creator Box */}
-      <div className="bg-white rounded-[24px] p-4 shadow-sm border border-slate-100 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-emerald-100 text-[#056839] flex items-center justify-center">
-              <CheckCircle className="w-4 h-4 stroke-[2.5]" />
-            </div>
-            <h4 className="text-[15px] font-extrabold text-slate-900">Thêm việc nhà nhanh</h4>
-          </div>
-
-          <button className="text-[12px] font-bold text-[#056839] flex items-center gap-1 hover:underline">
-            Gợi ý mẫu <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-          </button>
-        </div>
-
-        <form onSubmit={handleQuickCreate} className="space-y-3">
-          {/* Input text */}
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Nhập tên việc (vd: Rửa bát, Mua sữa...)"
-              value={taskInput}
-              onChange={(e) => setTaskInput(e.target.value)}
-              className="w-full text-[13.5px] font-medium bg-slate-50 border border-slate-200/90 rounded-2xl px-4 py-3 pr-10 focus:outline-none focus:ring-2 focus:ring-[#056839]/20"
-            />
-            <button
-              type="button"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-            >
-              <SlidersHorizontal className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Assignee selection chips */}
-          <div className="flex items-center justify-between pt-1">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[12px] font-semibold text-slate-400 mr-1">Giao:</span>
-              {[
-                { name: 'Bố Minh', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150' },
-                { name: 'Mẹ Lan', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150' },
-                { name: 'Bé Bon', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=150' },
-              ].map((p) => {
-                const isSelected = selectedAssignee === p.name;
-                return (
-                  <button
-                    key={p.name}
-                    type="button"
-                    onClick={() => setSelectedAssignee(p.name)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold transition-all border ${
-                      isSelected
-                        ? 'bg-emerald-100/70 border-emerald-500/60 text-[#056839]'
-                        : 'bg-slate-100/80 border-slate-200/60 text-slate-600 hover:bg-slate-200/60'
-                    }`}
-                  >
-                    <img src={p.avatar} alt={p.name} className="w-4 h-4 rounded-full object-cover" />
-                    {p.name}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Bottom Row Action buttons */}
-          <div className="flex items-center justify-between pt-1 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() =>
-                setRewardPoints(rewardPoints === '+20k' ? '+30k' : '+20k')
-              }
-              className="flex items-center gap-1 px-3 py-1.5 bg-rose-50 border border-rose-200/60 text-rose-700 text-[12px] font-extrabold rounded-xl"
-            >
-              <Coins className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
-              <span>{rewardPoints}</span>
-            </button>
-
-            <button
-              type="submit"
-              className="flex items-center gap-1.5 px-5 py-2 bg-[#056839] hover:bg-[#04522d] text-white text-[13px] font-extrabold rounded-xl shadow-md shadow-[#056839]/20 transition-all active:scale-95"
-            >
-              <span>Tạo</span>
-              <ArrowRight className="w-4 h-4 stroke-[2.5]" />
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* 4. "Hôm nay" Section */}
-      <div className="pt-2">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#056839]"></span>
-            <h3 className="text-[16px] font-extrabold text-slate-900">
-              Hôm nay <span className="text-slate-400 text-[13px]">({localTodayTasks.length} việc)</span>
-            </h3>
-          </div>
-          <span className="text-[12px] font-bold text-[#056839]">
-            {localTodayTasks.filter((t) => t.completed).length} đã xong
-          </span>
-        </div>
-
-        <div className="space-y-3">
+      {/* Today Tasks Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Nhiệm vụ hôm nay</Text>
+        <View style={styles.taskList}>
           {localTodayTasks.map((t) => (
-            <div
+            <TouchableOpacity
               key={t.id}
-              onClick={() => toggleTodayTask(t.id)}
-              className={`p-4 bg-white rounded-[20px] shadow-sm border border-slate-100 flex items-center justify-between cursor-pointer transition-all hover:shadow-md ${
-                t.completed ? 'bg-slate-50/70' : ''
-              }`}
+              onPress={() => toggleTodayTask(t.id)}
+              activeOpacity={0.8}
+              style={[styles.taskCard, t.completed && styles.completedCard]}
             >
-              <div className="flex items-center gap-3 min-w-0">
-                {/* Completed Check Button */}
-                <button className="flex-shrink-0">
+              <View style={styles.taskLeft}>
+                <TouchableOpacity onPress={() => toggleTodayTask(t.id)}>
                   {t.completed ? (
-                    <div className="w-6 h-6 rounded-full bg-amber-700 text-white flex items-center justify-center shadow-sm">
-                      <CheckCircle2 className="w-5 h-5 fill-amber-700 text-white" />
-                    </div>
+                    <CheckCircle2 size={24} color="#10B981" />
                   ) : (
-                    <Circle className="w-6 h-6 text-indigo-300 stroke-[1.8]" />
+                    <Circle size={24} color="#A5B4FC" strokeWidth={1.8} />
                   )}
-                </button>
-
-                <div className="min-w-0">
-                  <h4
-                    className={`text-[14px] font-bold leading-snug truncate ${
-                      t.completed ? 'line-through text-slate-400 font-semibold' : 'text-slate-900'
-                    }`}
-                  >
+                </TouchableOpacity>
+                <View style={styles.taskTextGroup}>
+                  <Text style={[styles.taskTitle, t.completed && styles.completedText]}>
                     {t.title}
-                  </h4>
-
-                  <div className="flex items-center gap-2 mt-1 text-[12px] text-slate-500 font-semibold">
-                    <div className="flex items-center gap-1">
-                      <img src={t.avatar} alt={t.assignedTo} className="w-4 h-4 rounded-full object-cover" />
-                      <span className="text-slate-700">{t.assignedTo}</span>
-                    </div>
-
-                    {t.completed ? (
-                      <span className="text-amber-700/80 font-medium">
-                        Đã hoàn thành lúc {t.completedTime}
-                      </span>
-                    ) : (
-                      <span className="text-rose-600 font-medium flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-rose-500" />
-                        {t.time}
-                      </span>
+                  </Text>
+                  <View style={styles.metaRow}>
+                    <Image source={{ uri: t.avatar }} style={styles.avatar} />
+                    <Text style={styles.assigneeName}>{t.assignedTo}</Text>
+                    {t.time && (
+                      <View style={styles.timeBadge}>
+                        <Clock size={11} color="#EA580C" />
+                        <Text style={styles.timeText}>{t.time}</Text>
+                      </View>
                     )}
-                  </div>
-                </div>
-              </div>
+                  </View>
+                </View>
+              </View>
 
-              {/* Tag / Reward */}
               {t.reward && (
-                <span className="px-2.5 py-1 bg-amber-50 border border-amber-200/80 text-amber-700 font-extrabold text-[11px] rounded-full flex-shrink-0 ml-2">
-                  🎖️ {t.reward}
-                </span>
+                <View style={styles.rewardBadge}>
+                  <Text style={styles.rewardText}>{t.reward}</Text>
+                </View>
               )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {/* Upcoming Tasks Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Sắp tới</Text>
+        <View style={styles.taskList}>
+          {localUpcomingTasks.map((t) => (
+            <TouchableOpacity
+              key={t.id}
+              onPress={() => toggleUpcomingTask(t.id)}
+              activeOpacity={0.8}
+              style={[styles.taskCard, t.completed && styles.completedCard]}
+            >
+              <View style={styles.taskLeft}>
+                <TouchableOpacity onPress={() => toggleUpcomingTask(t.id)}>
+                  {t.completed ? (
+                    <CheckCircle2 size={24} color="#10B981" />
+                  ) : (
+                    <Circle size={24} color="#A5B4FC" strokeWidth={1.8} />
+                  )}
+                </TouchableOpacity>
+                <View style={styles.taskTextGroup}>
+                  <Text style={[styles.taskTitle, t.completed && styles.completedText]}>
+                    {t.title}
+                  </Text>
+                  <View style={styles.metaRow}>
+                    <Image source={{ uri: t.avatar }} style={styles.avatar} />
+                    <Text style={styles.assigneeName}>{t.assignedTo}</Text>
+                  </View>
+                </View>
+              </View>
 
               {t.tag && (
-                <span
-                  className={`px-2.5 py-1 font-bold text-[11px] rounded-full flex-shrink-0 ml-2 ${
-                    t.tagColor || 'bg-slate-100 text-slate-600'
-                  }`}
-                >
-                  {t.tag}
-                </span>
+                <View style={styles.tagBadge}>
+                  <Text style={styles.tagText}>{t.tag}</Text>
+                </View>
               )}
-            </div>
+            </TouchableOpacity>
           ))}
-        </div>
-      </div>
-
-      {/* 5. "Sắp tới" Section */}
-      <div className="pt-2">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
-            <h3 className="text-[16px] font-extrabold text-slate-900">
-              Sắp tới <span className="text-slate-400 text-[13px]">({localUpcomingTasks.length} việc)</span>
-            </h3>
-          </div>
-          <button className="text-[12px] font-bold text-slate-500 hover:text-[#056839]">
-            Xem tất cả &rsaquo;
-          </button>
-        </div>
-
-        <div className="space-y-3">
-          {localUpcomingTasks.map((t) => (
-            <div
-              key={t.id}
-              onClick={() => toggleUpcomingTask(t.id)}
-              className={`p-4 bg-white rounded-[20px] shadow-sm border border-slate-100 flex items-center justify-between cursor-pointer transition-all hover:shadow-md ${
-                t.completed ? 'opacity-60 bg-slate-50' : ''
-              }`}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <button className="flex-shrink-0">
-                  {t.completed ? (
-                    <CheckCircle2 className="w-6 h-6 text-emerald-500" />
-                  ) : (
-                    <Circle className="w-6 h-6 text-indigo-300 stroke-[1.8]" />
-                  )}
-                </button>
-
-                <div className="min-w-0">
-                  <h4
-                    className={`text-[14px] font-bold leading-snug truncate ${
-                      t.completed ? 'line-through text-slate-400' : 'text-slate-900'
-                    }`}
-                  >
-                    {t.title}
-                  </h4>
-
-                  <div className="flex items-center gap-2 mt-1 text-[12px] text-slate-500 font-semibold">
-                    <div className="flex items-center gap-1">
-                      <img src={t.avatar} alt={t.assignedTo} className="w-4 h-4 rounded-full object-cover" />
-                      <span className="text-slate-700">{t.assignedTo}</span>
-                    </div>
-                    <span>•</span>
-                    <span className="text-slate-500">{t.tag}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Date tag or Reward */}
-              {t.dateLabel && (
-                <span
-                  className={`text-[12px] font-bold flex-shrink-0 ml-2 ${
-                    t.dateColor || 'text-slate-500'
-                  }`}
-                >
-                  {t.dateLabel}
-                </span>
-              )}
-
-              {t.reward && (
-                <span className="px-2.5 py-1 bg-amber-50 border border-amber-200/80 text-amber-700 font-extrabold text-[11px] rounded-full flex-shrink-0 ml-2">
-                  🎖️ {t.reward}
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+        </View>
+      </View>
+    </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  content: {
+    padding: 16,
+    paddingBottom: 100,
+    gap: 20,
+  },
+  header: {
+    marginBottom: 4,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  subtitle: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#64748B',
+    marginTop: 2,
+  },
+  section: {
+    gap: 10,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  taskList: {
+    gap: 10,
+  },
+  taskCard: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  completedCard: {
+    backgroundColor: '#F8FAFC',
+    opacity: 0.7,
+  },
+  taskLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  taskTextGroup: {
+    flex: 1,
+  },
+  taskTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  completedText: {
+    textDecorationLine: 'line-through',
+    color: '#94A3B8',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+  },
+  avatar: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+  },
+  assigneeName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  timeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#FFF7ED',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginLeft: 4,
+  },
+  timeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#EA580C',
+  },
+  rewardBadge: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  rewardText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#056839',
+  },
+  tagBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  tagText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#475569',
+  },
+});

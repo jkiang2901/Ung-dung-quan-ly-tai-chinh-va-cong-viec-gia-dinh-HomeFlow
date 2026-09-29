@@ -1,6 +1,7 @@
 import React from 'react';
+import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import type { HouseholdTask } from '../types';
-import { Clock, CheckCircle2, Circle } from 'lucide-react';
+import { Clock, CheckCircle2, Circle } from 'lucide-react-native';
 
 interface TodayTasksProps {
   tasks: HouseholdTask[];
@@ -12,99 +13,264 @@ export const TodayTasks: React.FC<TodayTasksProps> = ({ tasks, onToggleTask, onV
   const formatMoney = (val: number) => val.toLocaleString('vi-VN');
 
   return (
-    <div className="mx-4 my-4">
+    <View style={styles.container}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <h3 className="text-[17px] font-extrabold text-slate-900 tracking-tight">
-            Việc nhà hôm nay
-          </h3>
-          <span className="w-5 h-5 rounded-full bg-orange-100 text-orange-600 text-[12px] font-bold flex items-center justify-center">
-            {tasks.filter((t) => !t.completed).length}
-          </span>
-        </div>
-        <button
-          onClick={onViewAll}
-          className="text-[13px] font-bold text-slate-500 hover:text-[#056839] transition-colors flex items-center gap-0.5"
-        >
-          Xem tất cả <span className="text-[15px]">&rsaquo;</span>
-        </button>
-      </div>
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.sectionTitle}>Việc nhà hôm nay</Text>
+          <View style={styles.badgeCount}>
+            <Text style={styles.badgeText}>
+              {tasks.filter((t) => !t.completed).length}
+            </Text>
+          </View>
+        </View>
+        <TouchableOpacity onPress={onViewAll} activeOpacity={0.7}>
+          <Text style={styles.viewAllText}>Xem tất cả ›</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Task List */}
-      <div className="space-y-3">
+      <View style={styles.taskList}>
         {tasks.map((task) => (
-          <div
+          <TouchableOpacity
             key={task.id}
-            onClick={() => onToggleTask(task.id)}
-            className={`p-4 bg-white rounded-[20px] shadow-sm border border-slate-100/90 flex items-start justify-between cursor-pointer transition-all hover:shadow-md ${
-              task.completed ? 'opacity-60 bg-slate-50' : ''
-            }`}
+            onPress={() => onToggleTask(task.id)}
+            activeOpacity={0.8}
+            style={[
+              styles.taskCard,
+              task.completed && styles.taskCompletedCard,
+            ]}
           >
-            <div className="flex items-start gap-3 flex-1 min-w-0 pr-2">
+            <View style={styles.taskContent}>
               {/* Checkbox Icon */}
-              <button
-                className="mt-0.5 text-indigo-400 hover:text-indigo-600 transition-colors flex-shrink-0"
-                aria-label="Toggle completed"
+              <TouchableOpacity
+                onPress={() => onToggleTask(task.id)}
+                style={styles.checkboxButton}
               >
                 {task.completed ? (
-                  <CheckCircle2 className="w-6 h-6 text-emerald-500 fill-emerald-50" />
+                  <CheckCircle2 size={24} color="#10B981" />
                 ) : (
-                  <Circle className="w-6 h-6 text-indigo-300 stroke-[1.8]" />
+                  <Circle size={24} color="#A5B4FC" strokeWidth={1.8} />
                 )}
-              </button>
+              </TouchableOpacity>
 
-              <div className="min-w-0">
-                <h4
-                  className={`text-[14px] font-bold text-slate-800 leading-snug truncate ${
-                    task.completed ? 'line-through text-slate-400' : ''
-                  }`}
+              <View style={styles.taskInfo}>
+                <Text
+                  style={[
+                    styles.taskTitle,
+                    task.completed && styles.taskTitleCompleted,
+                  ]}
+                  numberOfLines={2}
                 >
                   {task.title}
-                </h4>
+                </Text>
 
-                <div className="flex items-center gap-2.5 mt-1.5 flex-wrap text-[12px] text-slate-500 font-medium">
+                <View style={styles.metaRow}>
                   {task.time && (
-                    <span className="flex items-center gap-1 text-orange-600 font-semibold bg-orange-50 px-2 py-0.5 rounded-full">
-                      <Clock className="w-3 h-3" />
-                      {task.time}
-                    </span>
+                    <View style={styles.timeBadge}>
+                      <Clock size={12} color="#EA580C" />
+                      <Text style={styles.timeText}>{task.time}</Text>
+                    </View>
                   )}
                   {task.amount && (
-                    <span className="flex items-center gap-1 text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
-                      💵 {formatMoney(task.amount)} đ
-                    </span>
+                    <View style={styles.amountBadge}>
+                      <Text style={styles.amountText}>
+                        💵 {formatMoney(task.amount)} đ
+                      </Text>
+                    </View>
                   )}
 
-                  <div className="flex items-center gap-1.5">
+                  <View style={styles.assignedRow}>
                     {task.avatarUrl && (
-                      <img
-                        src={task.avatarUrl}
-                        alt={task.assignedTo}
-                        className="w-4 h-4 rounded-full object-cover"
+                      <Image
+                        source={{ uri: task.avatarUrl }}
+                        style={styles.assignedAvatar}
                       />
                     )}
-                    <span className="text-slate-600 font-semibold">{task.assignedTo}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+                    <Text style={styles.assignedName}>{task.assignedTo}</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
 
             {/* Tag Badge */}
             {task.tag && (
-              <span
-                className={`text-[11px] font-bold px-2.5 py-1 rounded-full flex-shrink-0 ${
-                  task.priority
-                    ? 'bg-rose-50 text-rose-600 border border-rose-100'
-                    : 'bg-slate-100 text-slate-600'
-                }`}
+              <View
+                style={[
+                  styles.tagBadge,
+                  task.priority ? styles.tagPriority : styles.tagNormal,
+                ]}
               >
-                {task.tag}
-              </span>
+                <Text
+                  style={[
+                    styles.tagText,
+                    task.priority ? styles.tagTextPriority : styles.tagTextNormal,
+                  ]}
+                >
+                  {task.tag}
+                </Text>
+              </View>
             )}
-          </div>
+          </TouchableOpacity>
         ))}
-      </div>
-    </div>
+      </View>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    marginHorizontal: 16,
+    marginVertical: 10,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.3,
+  },
+  badgeCount: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#FFEDD5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#EA580C',
+  },
+  viewAllText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  taskList: {
+    gap: 10,
+  },
+  taskCard: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  taskCompletedCard: {
+    backgroundColor: '#F8FAFC',
+    opacity: 0.7,
+  },
+  taskContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    flex: 1,
+    gap: 12,
+    marginRight: 8,
+  },
+  checkboxButton: {
+    marginTop: 2,
+  },
+  taskInfo: {
+    flex: 1,
+  },
+  taskTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E293B',
+    lineHeight: 20,
+  },
+  taskTitleCompleted: {
+    textDecorationLine: 'line-through',
+    color: '#94A3B8',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 6,
+  },
+  timeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FFF7ED',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  timeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#EA580C',
+  },
+  amountBadge: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  amountText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#047857',
+  },
+  assignedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  assignedAvatar: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+  },
+  assignedName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  tagBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  tagPriority: {
+    backgroundColor: '#FFF1F2',
+    borderWidth: 1,
+    borderColor: '#FFE4E6',
+  },
+  tagNormal: {
+    backgroundColor: '#F1F5F9',
+  },
+  tagText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  tagTextPriority: {
+    color: '#E11D48',
+  },
+  tagTextNormal: {
+    color: '#475569',
+  },
+});

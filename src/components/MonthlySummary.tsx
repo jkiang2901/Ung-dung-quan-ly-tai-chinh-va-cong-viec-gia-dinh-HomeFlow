@@ -1,5 +1,6 @@
 import React from 'react';
-import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { View, Text, StyleSheet } from 'react-native';
+import { ArrowDownLeft, ArrowUpRight } from 'lucide-react-native';
 
 interface MonthlySummaryProps {
   totalIncome: number;
@@ -10,44 +11,119 @@ export const MonthlySummary: React.FC<MonthlySummaryProps> = ({ totalIncome, tot
   const formatMoney = (val: number) => val.toLocaleString('vi-VN');
 
   return (
-    <div className="mx-4 my-2 grid grid-cols-2 gap-3">
+    <View style={styles.gridContainer}>
       {/* Monthly Income Card */}
-      <div className="bg-white rounded-[20px] p-4 shadow-sm border border-slate-100 flex flex-col justify-between hover:shadow-md transition-shadow">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[13px] font-semibold text-slate-500">Tổng thu tháng</span>
-          <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-            <ArrowDownLeft className="w-4 h-4 stroke-[2.5]" />
-          </div>
-        </div>
-        <div>
-          <div className="text-[18px] font-extrabold text-[#056839] leading-tight flex items-baseline gap-0.5">
-            {formatMoney(totalIncome)} <span className="text-[14px] font-bold">đ</span>
-          </div>
-          <p className="text-[11px] font-medium text-emerald-700 mt-1 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            2 khoản đã vào
-          </p>
-        </div>
-      </div>
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Tổng thu tháng</Text>
+          <View style={[styles.iconBox, { backgroundColor: '#D1FAE5' }]}>
+            <ArrowDownLeft size={16} color="#059669" strokeWidth={2.5} />
+          </View>
+        </View>
+        <View>
+          <View style={styles.amountRow}>
+            <Text style={[styles.amountText, { color: '#056839' }]}>
+              {formatMoney(totalIncome)}
+            </Text>
+            <Text style={[styles.currencyText, { color: '#056839' }]}>đ</Text>
+          </View>
+          <View style={styles.subtextRow}>
+            <View style={[styles.dot, { backgroundColor: '#10B981' }]} />
+            <Text style={[styles.subtext, { color: '#047857' }]}>2 khoản đã vào</Text>
+          </View>
+        </View>
+      </View>
 
       {/* Monthly Expense Card */}
-      <div className="bg-white rounded-[20px] p-4 shadow-sm border border-slate-100 flex flex-col justify-between hover:shadow-md transition-shadow">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[13px] font-semibold text-slate-500">Chi tiêu tháng</span>
-          <div className="w-7 h-7 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
-            <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
-          </div>
-        </div>
-        <div>
-          <div className="text-[18px] font-extrabold text-orange-600 leading-tight flex items-baseline gap-0.5">
-            {formatMoney(totalExpense)} <span className="text-[14px] font-bold">đ</span>
-          </div>
-          <p className="text-[11px] font-medium text-orange-700 mt-1 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
-            58% kế hoạch
-          </p>
-        </div>
-      </div>
-    </div>
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Chi tiêu tháng</Text>
+          <View style={[styles.iconBox, { backgroundColor: '#FFEDD5' }]}>
+            <ArrowUpRight size={16} color="#EA580C" strokeWidth={2.5} />
+          </View>
+        </View>
+        <View>
+          <View style={styles.amountRow}>
+            <Text style={[styles.amountText, { color: '#EA580C' }]}>
+              {formatMoney(totalExpense)}
+            </Text>
+            <Text style={[styles.currencyText, { color: '#EA580C' }]}>đ</Text>
+          </View>
+          <View style={styles.subtextRow}>
+            <View style={[styles.dot, { backgroundColor: '#F97316' }]} />
+            <Text style={[styles.subtext, { color: '#C2410C' }]}>58% kế hoạch</Text>
+          </View>
+        </View>
+      </View>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  gridContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginVertical: 8,
+    gap: 12,
+  },
+  card: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  cardTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  iconBox: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  amountRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 2,
+  },
+  amountText: {
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  currencyText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  subtextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  subtext: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+});

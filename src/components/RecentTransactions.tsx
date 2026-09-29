@@ -1,6 +1,7 @@
 import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import type { Transaction } from '../types';
-import { ShoppingBag, Landmark, Baby, CreditCard, Tag } from 'lucide-react';
+import { ShoppingBag, Landmark, Baby, CreditCard, Tag } from 'lucide-react-native';
 
 interface RecentTransactionsProps {
   transactions: Transaction[];
@@ -22,91 +23,195 @@ export const RecentTransactions: React.FC<RecentTransactionsProps> = ({
       case 'shopping':
         return {
           icon: ShoppingBag,
-          bg: 'bg-orange-100/80 text-orange-600',
+          bg: '#FFEDD5',
+          color: '#EA580C',
         };
       case 'salary':
         return {
           icon: Landmark,
-          bg: 'bg-emerald-100/80 text-emerald-600',
+          bg: '#D1FAE5',
+          color: '#059669',
         };
       case 'baby':
         return {
           icon: Baby,
-          bg: 'bg-cyan-100/80 text-cyan-600',
+          bg: '#CFFAFE',
+          color: '#0891B2',
         };
       default:
         return {
           icon: CreditCard,
-          bg: 'bg-purple-100/80 text-purple-600',
+          bg: '#F3E8FF',
+          color: '#9333EA',
         };
     }
   };
 
   return (
-    <div className="mx-4 my-4 mb-24">
+    <View style={styles.container}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-[17px] font-extrabold text-slate-900 tracking-tight">
-          Giao dịch gần đây
-        </h3>
-        <button
-          onClick={onViewHistory}
-          className="text-[13px] font-bold text-slate-500 hover:text-[#056839] transition-colors flex items-center gap-0.5"
-        >
-          Lịch sử <span className="text-[15px]">&rsaquo;</span>
-        </button>
-      </div>
+      <View style={styles.header}>
+        <Text style={styles.sectionTitle}>Giao dịch gần đây</Text>
+        <TouchableOpacity onPress={onViewHistory} activeOpacity={0.7}>
+          <Text style={styles.viewHistoryText}>Lịch sử ›</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Transaction Items */}
-      <div className="space-y-3">
+      <View style={styles.txList}>
         {transactions.map((tx) => {
-          const { icon: IconComp, bg } = getIcon(tx.iconType);
+          const iconConfig = getIcon(tx.iconType);
+          const IconComp = iconConfig.icon;
           const isIncome = tx.amount > 0;
 
           return (
-            <div
-              key={tx.id}
-              className="p-4 bg-white rounded-[20px] shadow-sm border border-slate-100/90 flex items-center justify-between hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-center gap-3.5 min-w-0">
+            <View key={tx.id} style={styles.txCard}>
+              <View style={styles.txLeft}>
                 {/* Category Icon */}
-                <div
-                  className={`w-12 h-12 rounded-[16px] ${bg} flex items-center justify-center flex-shrink-0 shadow-sm`}
+                <View
+                  style={[
+                    styles.iconWrapper,
+                    { backgroundColor: iconConfig.bg },
+                  ]}
                 >
-                  <IconComp className="w-6 h-6 stroke-[2.2]" />
-                </div>
+                  <IconComp size={22} color={iconConfig.color} strokeWidth={2.2} />
+                </View>
 
                 {/* Details */}
-                <div className="min-w-0">
-                  <h4 className="text-[14.5px] font-bold text-slate-900 truncate leading-snug">
+                <View style={styles.txDetails}>
+                  <Text style={styles.txTitle} numberOfLines={1}>
                     {tx.title}
-                  </h4>
-                  <div className="flex items-center gap-1.5 mt-0.5 text-[12px] text-slate-400 font-medium">
-                    <span className="text-slate-600 font-semibold">{tx.user}</span>
-                    <span>•</span>
-                    <span>{tx.time}</span>
-                  </div>
-                </div>
-              </div>
+                  </Text>
+                  <View style={styles.txSubDetails}>
+                    <Text style={styles.txUser}>{tx.user}</Text>
+                    <Text style={styles.dot}>•</Text>
+                    <Text style={styles.txTime}>{tx.time}</Text>
+                  </View>
+                </View>
+              </View>
 
               {/* Amount & Category label */}
-              <div className="text-right flex-shrink-0 pl-2">
-                <div
-                  className={`text-[15px] font-extrabold tracking-tight ${
-                    isIncome ? 'text-emerald-600' : 'text-slate-900'
-                  }`}
+              <View style={styles.txRight}>
+                <Text
+                  style={[
+                    styles.txAmount,
+                    { color: isIncome ? '#059669' : '#0F172A' },
+                  ]}
                 >
                   {formatMoney(tx.amount)}
-                </div>
-                <div className="text-[11px] font-semibold text-slate-400 mt-0.5 flex items-center justify-end gap-1">
-                  <Tag className="w-3 h-3 text-slate-300" />
-                  {tx.category}
-                </div>
-              </div>
-            </div>
+                </Text>
+                <View style={styles.categoryRow}>
+                  <Tag size={12} color="#94A3B8" />
+                  <Text style={styles.categoryText}>{tx.category}</Text>
+                </View>
+              </View>
+            </View>
           );
         })}
-      </div>
-    </div>
+      </View>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    marginHorizontal: 16,
+    marginVertical: 10,
+    marginBottom: 100,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.3,
+  },
+  viewHistoryText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  txList: {
+    gap: 10,
+  },
+  txCard: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  txLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    flex: 1,
+  },
+  iconWrapper: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  txDetails: {
+    flex: 1,
+  },
+  txTitle: {
+    fontSize: 14.5,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  txSubDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 3,
+  },
+  txUser: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  dot: {
+    fontSize: 12,
+    color: '#94A3B8',
+  },
+  txTime: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#94A3B8',
+  },
+  txRight: {
+    alignItems: 'flex-end',
+    paddingLeft: 8,
+  },
+  txAmount: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 3,
+  },
+  categoryText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
+});

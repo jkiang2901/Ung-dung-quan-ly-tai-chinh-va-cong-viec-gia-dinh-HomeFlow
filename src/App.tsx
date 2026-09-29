@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, SafeAreaView } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { Header } from './components/Header';
 import { Greeting } from './components/Greeting';
 import { FamilyFundCard } from './components/FamilyFundCard';
@@ -98,14 +100,15 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f6f8] flex justify-center selection:bg-emerald-100">
+    <SafeAreaView style={styles.outerContainer}>
+      <StatusBar style="dark" />
       {/* Initial Animated Splash Screen */}
       {showSplash && (
         <SplashScreen onFinish={() => setShowSplash(false)} autoHideDuration={2400} />
       )}
 
-      {/* Mobile viewport container */}
-      <div className="w-full max-w-md bg-[#f4f6f8] min-h-screen relative flex flex-col shadow-2xl">
+      {/* Main Container */}
+      <View style={styles.innerContainer}>
         {/* Header */}
         <Header
           members={members}
@@ -124,7 +127,7 @@ export function App() {
 
         {/* Dynamic Screen Content based on Active Tab */}
         {activeTab === 'home' && (
-          <main className="flex-1 space-y-1 animate-in fade-in duration-300">
+          <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollBody}>
             {/* Greeting Header */}
             <Greeting />
 
@@ -160,7 +163,7 @@ export function App() {
               transactions={transactions}
               onViewHistory={() => showToastMessage('Xem toàn bộ lịch sử giao dịch')}
             />
-          </main>
+          </ScrollView>
         )}
 
         {activeTab === 'wallet' && (
@@ -198,15 +201,53 @@ export function App() {
           onSubmitTransfer={handleTransfer}
         />
 
-        {/* Floating Toast Notification */}
+        {/* Toast Notification */}
         {toast && (
-          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 bg-slate-900/90 text-white text-xs font-bold rounded-full shadow-xl backdrop-blur-md animate-in slide-in-from-bottom duration-200">
-            {toast}
-          </div>
+          <View style={styles.toastContainer}>
+            <Text style={styles.toastText}>{toast}</Text>
+          </View>
         )}
-      </div>
-    </div>
+      </View>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  outerContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  innerContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    position: 'relative',
+  },
+  scrollContent: {
+    flex: 1,
+  },
+  scrollBody: {
+    paddingBottom: 20,
+  },
+  toastContainer: {
+    position: 'absolute',
+    bottom: 80,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
+    zIndex: 50,
+  },
+  toastText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+});
 
 export default App;

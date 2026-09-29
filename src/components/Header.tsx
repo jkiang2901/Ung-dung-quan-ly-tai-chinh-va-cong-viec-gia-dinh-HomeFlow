@@ -1,5 +1,6 @@
 import React from 'react';
-import { Bell, Home } from 'lucide-react';
+import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { Bell, Home } from 'lucide-react-native';
 import type { FamilyMember } from '../types';
 
 interface HeaderProps {
@@ -16,50 +17,145 @@ export const Header: React.FC<HeaderProps> = ({
   onLogoClick,
 }) => {
   return (
-    <header className="flex items-center justify-between px-4 pt-3 pb-2 bg-white sticky top-0 z-20 border-b border-slate-100/80">
+    <View style={styles.header}>
       {/* Brand & Logo */}
-      <div
-        onClick={onLogoClick}
-        className="flex items-center gap-2.5 cursor-pointer hover:opacity-90 transition-opacity"
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={onLogoClick}
+        style={styles.brandContainer}
       >
-        <div className="w-10 h-10 rounded-xl bg-[#056839] flex items-center justify-center text-white shadow-md shadow-[#056839]/20">
-          <Home className="w-5 h-5 stroke-[2.5]" />
-        </div>
-        <div>
-          <h1 className="text-[19px] font-bold text-[#056839] leading-tight tracking-tight">HomeFlow</h1>
-          <p className="text-[12px] font-medium text-slate-400 -mt-0.5">{subtitle}</p>
-        </div>
-      </div>
+        <View style={styles.logoBox}>
+          <Home size={20} color="#FFFFFF" strokeWidth={2.5} />
+        </View>
+        <View>
+          <Text style={styles.brandTitle}>HomeFlow</Text>
+          <Text style={styles.brandSubtitle}>{subtitle}</Text>
+        </View>
+      </TouchableOpacity>
 
       {/* Right Actions: Notifications & Avatars */}
-      <div className="flex items-center gap-3">
+      <View style={styles.rightActions}>
         {/* Notification Bell */}
-        <button
-          onClick={onOpenNotifications}
-          className="relative p-2 rounded-full hover:bg-slate-100 transition-colors text-slate-700"
-          aria-label="Thông báo"
+        <TouchableOpacity
+          onPress={onOpenNotifications}
+          style={styles.bellButton}
+          activeOpacity={0.7}
         >
-          <Bell className="w-5 h-5 text-slate-700" />
-          <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white" />
-        </button>
+          <Bell size={20} color="#334155" />
+          <View style={styles.unreadDot} />
+        </TouchableOpacity>
 
         {/* Member Avatars Stack */}
-        <div className="flex items-center -space-x-2 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity">
-          {members.slice(0, 2).map((member) => (
-            <img
+        <View style={styles.avatarStack}>
+          {members.slice(0, 2).map((member, index) => (
+            <Image
               key={member.id}
-              className="inline-block h-8 w-8 rounded-full ring-2 ring-white object-cover shadow-sm"
-              src={member.avatar}
-              alt={member.name}
+              source={{ uri: member.avatar }}
+              style={[
+                styles.avatar,
+                index > 0 && { marginLeft: -8 },
+              ]}
             />
           ))}
           {members.length > 2 && (
-            <div className="flex h-8 w-8 items-center justify-center rounded-full ring-2 ring-white bg-[#056839] text-white text-[11px] font-bold shadow-sm">
-              +{members.length - 2}
-            </div>
+            <View style={[styles.avatarMore, { marginLeft: -8 }]}>
+              <Text style={styles.avatarMoreText}>+{members.length - 2}</Text>
+            </View>
           )}
-        </div>
-      </div>
-    </header>
+        </View>
+      </View>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 10,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  brandContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  logoBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#056839',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#056839',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  brandTitle: {
+    fontSize: 19,
+    fontWeight: '700',
+    color: '#056839',
+    letterSpacing: -0.3,
+  },
+  brandSubtitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#94A3B8',
+    marginTop: -2,
+  },
+  rightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  bellButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#F8FAFC',
+    position: 'relative',
+  },
+  unreadDot: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+    backgroundColor: '#EF4444',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  avatarStack: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  avatarMore: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    backgroundColor: '#056839',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarMoreText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+});

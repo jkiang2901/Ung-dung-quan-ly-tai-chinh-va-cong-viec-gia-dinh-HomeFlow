@@ -1,6 +1,7 @@
 import React from 'react';
+import { View, Text, TouchableOpacity, Image, ScrollView, StyleSheet } from 'react-native';
 import type { FamilyMember } from '../../types';
-import { UserPlus, ShieldCheck, Heart } from 'lucide-react';
+import { UserPlus, ShieldCheck, Heart } from 'lucide-react-native';
 
 interface FamilyTabProps {
   members: FamilyMember[];
@@ -8,78 +9,241 @@ interface FamilyTabProps {
 
 export const FamilyTab: React.FC<FamilyTabProps> = ({ members }) => {
   return (
-    <div className="p-4 pb-28 space-y-5 animate-in fade-in duration-300">
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-extrabold text-slate-900">Thành Viên Gia Đình</h2>
-          <p className="text-xs font-semibold text-slate-500 mt-0.5">
-            Tổ ấm: Gia đình Hạnh Phúc (3 người)
-          </p>
-        </div>
-        <button className="flex items-center gap-1.5 px-3 py-2 bg-[#056839] text-white text-xs font-bold rounded-xl shadow-md hover:bg-[#04522d]">
-          <UserPlus className="w-4 h-4" />
-          Mời người thân
-        </button>
-      </div>
+      <View style={styles.header}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>Thành Viên Gia Đình</Text>
+          <Text style={styles.subtitle}>
+            Tổ ấm: Gia đình Hạnh Phúc ({members.length} người)
+          </Text>
+        </View>
+        <TouchableOpacity style={styles.inviteButton} activeOpacity={0.8}>
+          <UserPlus size={14} color="#FFFFFF" />
+          <Text style={styles.inviteText}>Mời người thân</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Family Banner Card */}
-      <div className="p-5 rounded-[24px] bg-gradient-to-r from-emerald-600 via-teal-700 to-[#056839] text-white shadow-lg relative overflow-hidden">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md">
-            <Heart className="w-6 h-6 text-rose-300 fill-rose-300" />
-          </div>
-          <div>
-            <h3 className="text-base font-extrabold">Gia Đình Hạnh Phúc</h3>
-            <p className="text-xs font-medium text-emerald-100">
-              Đồng hành tài chính & sẻ chia việc nhà mỗi ngày
-            </p>
-          </div>
-        </div>
-      </div>
+      <View style={styles.bannerCard}>
+        <View style={styles.bannerIconBox}>
+          <Heart size={24} color="#FDA4AF" fill="#FDA4AF" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.bannerTitle}>Gia Đình Hạnh Phúc</Text>
+          <Text style={styles.bannerSubtitle}>
+            Đồng hành tài chính & sẻ chia việc nhà mỗi ngày
+          </Text>
+        </View>
+      </View>
 
       {/* Members List */}
-      <div>
-        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">
-          Danh sách thành viên
-        </h3>
-        <div className="space-y-3">
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Danh sách thành viên</Text>
+        <View style={styles.memberList}>
           {members.map((m) => (
-            <div
-              key={m.id}
-              className="p-4 bg-white rounded-[20px] border border-slate-100 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-center gap-3">
-                <img
-                  src={m.avatar}
-                  alt={m.name}
-                  className="w-12 h-12 rounded-2xl object-cover shadow-sm ring-2 ring-slate-100"
-                />
-                <div>
-                  <h4 className="text-base font-bold text-slate-900">{m.name}</h4>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold mt-0.5">
-                    <ShieldCheck className="w-3.5 h-3.5 text-[#056839]" />
-                    {m.role}
-                  </div>
-                </div>
-              </div>
+            <View key={m.id} style={styles.memberCard}>
+              <View style={styles.memberLeft}>
+                <Image source={{ uri: m.avatar }} style={styles.avatar} />
+                <View>
+                  <Text style={styles.memberName}>{m.name}</Text>
+                  <View style={styles.roleRow}>
+                    <ShieldCheck size={14} color="#056839" />
+                    <Text style={styles.roleText}>{m.role}</Text>
+                  </View>
+                </View>
+              </View>
 
-              <span className="text-xs font-bold text-[#056839] bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
-                Đã đồng bộ
-              </span>
-            </div>
+              <View style={styles.syncedBadge}>
+                <Text style={styles.syncedText}>Đã đồng bộ</Text>
+              </View>
+            </View>
           ))}
-        </div>
-      </div>
+        </View>
+      </View>
 
       {/* Rules & Roles Info */}
-      <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/70 text-xs space-y-2 text-slate-600">
-        <div className="font-bold text-slate-800 flex items-center gap-1.5">
-          <ShieldCheck className="w-4 h-4 text-[#056839]" /> Quyền hạn & Phân quyền
-        </div>
-        <p>• Quản trị viên (Bố Minh): Có quyền duyệt ngân sách & điều chuyển tiền từ Quỹ chung.</p>
-        <p>• Quản lý thu chi (Mẹ Lan): Thêm thu chi, quản lý việc nhà & duyệt thanh toán hoá đơn.</p>
-      </div>
-    </div>
+      <View style={styles.infoBox}>
+        <View style={styles.infoTitleRow}>
+          <ShieldCheck size={16} color="#056839" />
+          <Text style={styles.infoTitle}>Quyền hạn & Phân quyền</Text>
+        </View>
+        <Text style={styles.infoBullet}>
+          • Quản trị viên (Bố Minh): Có quyền duyệt ngân sách & điều chuyển tiền từ Quỹ chung.
+        </Text>
+        <Text style={styles.infoBullet}>
+          • Quản lý thu chi (Mẹ Lan): Thêm thu chi, quản lý việc nhà & duyệt thanh toán hoá đơn.
+        </Text>
+      </View>
+    </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  content: {
+    padding: 16,
+    paddingBottom: 100,
+    gap: 20,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  subtitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+    marginTop: 2,
+  },
+  inviteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#056839',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    shadowColor: '#056839',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  inviteText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  bannerCard: {
+    padding: 18,
+    borderRadius: 24,
+    backgroundColor: '#056839',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    shadowColor: '#056839',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  bannerIconBox: {
+    padding: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 16,
+  },
+  bannerTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  bannerSubtitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#D1FAE5',
+    marginTop: 2,
+  },
+  section: {
+    gap: 12,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  memberList: {
+    gap: 10,
+  },
+  memberCard: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  memberLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#F1F5F9',
+  },
+  memberName: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  roleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 3,
+  },
+  roleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  syncedBadge: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  syncedText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#056839',
+  },
+  infoBox: {
+    padding: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 6,
+  },
+  infoTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
+  infoTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#1E293B',
+  },
+  infoBullet: {
+    fontSize: 12,
+    color: '#475569',
+    lineHeight: 18,
+  },
+});

@@ -1,33 +1,96 @@
 import React from 'react';
+import { View, Text, Image, StyleSheet } from 'react-native';
 
 export const Greeting: React.FC = () => {
   return (
-    <div className="flex items-center justify-between px-4 pt-3 pb-2">
-      <div>
-        <h2 className="text-[22px] font-extrabold text-slate-900 tracking-tight flex items-center gap-1.5">
-          Chào buổi sáng! <span className="animate-bounce inline-block">👋</span>
-        </h2>
-        <p className="text-[13px] text-slate-500 font-medium mt-0.5">
-          Gia đình Hạnh Phúc <span className="mx-1 text-slate-300">•</span> Tháng 10 ấm no
-        </p>
-      </div>
+    <View style={styles.container}>
+      <View>
+        <Text style={styles.title}>
+          Chào buổi sáng! 👋
+        </Text>
+        <Text style={styles.subtitle}>
+          Gia đình Hạnh Phúc <Text style={styles.dot}>•</Text> Tháng 10 ấm no
+        </Text>
+      </View>
 
       {/* Pill with family photos preview */}
-      <div className="flex items-center gap-1 bg-white border border-slate-200/80 rounded-full px-2 py-1 shadow-sm">
-        <img
-          src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=120"
-          alt="Avatar"
-          className="w-6 h-6 rounded-full object-cover"
+      <View style={styles.pillContainer}>
+        <Image
+          source={{ uri: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=120' }}
+          style={styles.avatar}
         />
-        <img
-          src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120"
-          alt="Avatar"
-          className="w-6 h-6 rounded-full object-cover -ml-2 border border-white"
+        <Image
+          source={{ uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120' }}
+          style={[styles.avatar, styles.avatarOverlap]}
         />
-        <span className="text-[11px] font-bold text-[#056839] ml-1 pr-1 bg-emerald-50 px-1.5 py-0.5 rounded-full">
-          +1
-        </span>
-      </div>
-    </div>
+        <View style={styles.tagBadge}>
+          <Text style={styles.tagText}>+1</Text>
+        </View>
+      </View>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.4,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  dot: {
+    color: '#CBD5E1',
+    marginHorizontal: 4,
+  },
+  pillContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  avatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+  },
+  avatarOverlap: {
+    marginLeft: -8,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  tagBadge: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginLeft: 6,
+  },
+  tagText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#056839',
+  },
+});

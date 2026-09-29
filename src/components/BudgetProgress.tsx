@@ -1,5 +1,6 @@
 import React from 'react';
-import { Target } from 'lucide-react';
+import { View, Text, StyleSheet } from 'react-native';
+import { Target } from 'lucide-react-native';
 
 interface BudgetProgressProps {
   spent: number;
@@ -17,37 +18,109 @@ export const BudgetProgress: React.FC<BudgetProgressProps> = ({ spent, totalBudg
   const formatFull = (val: number) => val.toLocaleString('vi-VN');
 
   return (
-    <div className="mx-4 my-3 bg-white rounded-[20px] p-4 shadow-sm border border-slate-100">
+    <View style={styles.container}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-emerald-50 text-[#056839]">
-            <Target className="w-4 h-4" />
-          </div>
-          <span className="text-[14px] font-bold text-slate-800">
-            Tiến độ ngân sách chi tiêu
-          </span>
-        </div>
-        <span className="text-[13px] font-extrabold text-slate-900">
+      <View style={styles.header}>
+        <View style={styles.titleRow}>
+          <View style={styles.iconBox}>
+            <Target size={16} color="#056839" />
+          </View>
+          <Text style={styles.title}>Tiến độ ngân sách chi tiêu</Text>
+        </View>
+        <Text style={styles.amountText}>
           {formatShort(spent)} / {formatShort(totalBudget)} đ
-        </span>
-      </div>
+        </Text>
+      </View>
 
       {/* Progress Bar Container */}
-      <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden p-0.5">
-        <div
-          className="bg-gradient-to-r from-[#056839] to-emerald-500 h-full rounded-full transition-all duration-500 shadow-sm"
-          style={{ width: `${Math.min(percentage, 100)}%` }}
+      <View style={styles.progressBarBackground}>
+        <View
+          style={[
+            styles.progressBarFill,
+            { width: `${Math.min(percentage, 100)}%` },
+          ]}
         />
-      </div>
+      </View>
 
       {/* Footer statistics */}
-      <div className="flex items-center justify-between mt-2.5 text-[12px] font-medium text-slate-500">
-        <span>Đã dùng {percentage}% tháng này</span>
-        <span className="font-semibold text-slate-700">
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Đã dùng {percentage}% tháng này</Text>
+        <Text style={styles.remainingText}>
           Còn {formatFull(remaining)} đ
-        </span>
-      </div>
-    </div>
+        </Text>
+      </View>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    marginHorizontal: 16,
+    marginVertical: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  iconBox: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: '#ECFDF5',
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  amountText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  progressBarBackground: {
+    width: '100%',
+    backgroundColor: '#F1F5F9',
+    height: 12,
+    borderRadius: 6,
+    overflow: 'hidden',
+    padding: 2,
+  },
+  progressBarFill: {
+    backgroundColor: '#056839',
+    height: '100%',
+    borderRadius: 4,
+  },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  footerText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#64748B',
+  },
+  remainingText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#334155',
+  },
+});
