@@ -59,12 +59,12 @@ export function App() {
   };
 
   // Handle adding expense
-  const handleAddExpense = (data: { title: string; amount: number; category: string; user: string }) => {
+  const handleAddExpense = (data: { title: string; amount: number; category: string; user: string; dateTime?: string }) => {
     const newTx: Transaction = {
       id: `tx-${Date.now()}`,
       title: data.title,
       user: data.user,
-      time: 'Vừa xong',
+      time: data.dateTime || 'Vừa xong',
       amount: -data.amount,
       type: 'expense',
       category: data.category,
@@ -77,12 +77,12 @@ export function App() {
   };
 
   // Handle deposit to fund
-  const handleDeposit = (data: { amount: number; user: string; note: string }) => {
+  const handleDeposit = (data: { amount: number; user: string; note: string; dateTime?: string }) => {
     const newTx: Transaction = {
       id: `tx-${Date.now()}`,
       title: `Nộp quỹ: ${data.note || 'Đóng góp gia đình'}`,
       user: data.user,
-      time: 'Vừa xong',
+      time: data.dateTime || 'Vừa xong',
       amount: data.amount,
       type: 'income',
       category: 'Quỹ chung',
