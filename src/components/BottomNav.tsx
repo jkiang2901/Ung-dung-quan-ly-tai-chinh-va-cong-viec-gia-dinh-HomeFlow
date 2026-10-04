@@ -1,8 +1,15 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { LayoutGrid, Wallet, CheckSquare, Users, Plus } from 'lucide-react-native';
+import {
+  LayoutGrid,
+  Wallet,
+  BarChart3,
+  CheckSquare,
+  Users,
+  Plus,
+} from 'lucide-react-native';
 
-export type TabType = 'home' | 'wallet' | 'tasks' | 'family';
+export type TabType = 'home' | 'wallet' | 'statistics' | 'tasks' | 'family';
 
 interface BottomNavProps {
   activeTab: TabType;
@@ -18,6 +25,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   const tabs = [
     { id: 'home' as TabType, label: 'Trang chủ', icon: LayoutGrid },
     { id: 'wallet' as TabType, label: 'Ví tiền', icon: Wallet },
+    { id: 'statistics' as TabType, label: 'Thống kê', icon: BarChart3 },
     { id: 'tasks' as TabType, label: 'Công việc', icon: CheckSquare },
     { id: 'family' as TabType, label: 'Gia đình', icon: Users },
   ];
@@ -25,7 +33,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   return (
     <View style={styles.navContainer}>
       <View style={styles.barContent}>
-        {/* Floating Center (+) Action Button */}
         <View style={styles.floatingCenter}>
           <TouchableOpacity
             onPress={onOpenQuickAdd}
@@ -36,9 +43,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           </TouchableOpacity>
         </View>
 
-        {/* Left Tabs: Home & Wallet */}
-        <View style={styles.tabGroup}>
-          {tabs.slice(0, 2).map((t) => {
+        <View style={styles.tabRow}>
+          {tabs.map((t) => {
             const IconComp = t.icon;
             const isActive = activeTab === t.id;
             return (
@@ -46,41 +52,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 key={t.id}
                 onPress={() => onChangeTab(t.id)}
                 activeOpacity={0.7}
-                style={styles.tabItem}
+                style={[styles.tabItem, isActive && styles.tabItemActive]}
               >
                 <IconComp
                   size={20}
-                  color={isActive ? '#056839' : '#94A3B8'}
-                  strokeWidth={isActive ? 2.5 : 1.8}
-                />
-                <Text
-                  style={[
-                    styles.tabLabel,
-                    isActive && styles.tabLabelActive,
-                  ]}
-                >
-                  {t.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Right Tabs: Tasks & Family */}
-        <View style={styles.tabGroup}>
-          {tabs.slice(2, 4).map((t) => {
-            const IconComp = t.icon;
-            const isActive = activeTab === t.id;
-            return (
-              <TouchableOpacity
-                key={t.id}
-                onPress={() => onChangeTab(t.id)}
-                activeOpacity={0.7}
-                style={styles.tabItem}
-              >
-                <IconComp
-                  size={20}
-                  color={isActive ? '#056839' : '#94A3B8'}
+                  color={isActive ? '#FFFFFF' : '#94A3B8'}
                   strokeWidth={isActive ? 2.5 : 1.8}
                 />
                 <Text
@@ -147,15 +123,24 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 6,
   },
-  tabGroup: {
+  tabRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 32,
+    justifyContent: 'space-between',
+    gap: 6,
+    paddingLeft: 6,
+    paddingRight: 6,
   },
   tabItem: {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 3,
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 14,
+  },
+  tabItemActive: {
+    backgroundColor: '#056839',
   },
   tabLabel: {
     fontSize: 11,
@@ -164,6 +149,6 @@ const styles = StyleSheet.create({
   },
   tabLabelActive: {
     fontWeight: '800',
-    color: '#056839',
+    color: '#FFFFFF',
   },
 });

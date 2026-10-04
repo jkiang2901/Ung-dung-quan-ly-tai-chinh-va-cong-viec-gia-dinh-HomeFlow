@@ -7,7 +7,6 @@ import { FamilyFundCard } from './components/FamilyFundCard';
 import { MonthlySummary } from './components/MonthlySummary';
 import { BudgetProgress } from './components/BudgetProgress';
 import { QuickActions } from './components/QuickActions';
-import { ExpenseAllocation } from './components/ExpenseAllocation';
 import { TodayTasks } from './components/TodayTasks';
 import { RecentTransactions } from './components/RecentTransactions';
 import { BottomNav } from './components/BottomNav';
@@ -15,6 +14,7 @@ import type { TabType } from './components/BottomNav';
 import { ActionModal } from './components/modals/ActionModal';
 import type { ModalType } from './components/modals/ActionModal';
 import { WalletTab } from './components/tabs/WalletTab';
+import { StatisticsTab } from './components/tabs/StatisticsTab';
 import { TasksTab } from './components/tabs/TasksTab';
 import { FamilyTab } from './components/tabs/FamilyTab';
 import { SplashScreen } from './components/SplashScreen';
@@ -44,6 +44,58 @@ export function App() {
     setTimeout(() => {
       setToast(null);
     }, 3000);
+  };
+
+  const renderActiveTabContent = () => {
+    switch (activeTab) {
+      case 'home':
+        return (
+          <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollBody}>
+            <Greeting />
+            <FamilyFundCard balance={fundBalance} />
+            <MonthlySummary totalIncome={totalIncome} totalExpense={totalExpense} />
+            <BudgetProgress spent={totalExpense} totalBudget={totalBudget} />
+            <QuickActions
+              onDeposit={() => setModalType('deposit')}
+              onAddExpense={() => setModalType('expense')}
+              onTransfer={() => setModalType('transfer')}
+              onScanQR={() => setModalType('qr')}
+            />
+            <TodayTasks
+              tasks={tasks}
+              onToggleTask={handleToggleTask}
+              onViewAll={() => setActiveTab('tasks')}
+            />
+            <RecentTransactions
+              transactions={transactions}
+              onViewHistory={() => showToastMessage('Xem toàn bộ lịch sử giao dịch')}
+            />
+          </ScrollView>
+        );
+      case 'wallet':
+        return (
+          <WalletTab
+            fundBalance={fundBalance}
+            onOpenDeposit={() => setModalType('deposit')}
+            onOpenTransfer={() => setModalType('transfer')}
+          />
+        );
+      case 'statistics':
+        return <StatisticsTab />;
+      case 'tasks':
+        return (
+          <TasksTab
+            tasks={tasks}
+            members={members}
+            onToggleTask={handleToggleTask}
+            onAddTask={handleAddTask}
+          />
+        );
+      case 'family':
+        return <FamilyTab members={members} />;
+      default:
+        return <StatisticsTab />;
+    }
   };
 
   // Toggle household task completed state
@@ -137,71 +189,15 @@ export function App() {
               ? 'Công Việc'
               : activeTab === 'wallet'
               ? 'Ví Tiền'
+              : activeTab === 'statistics'
+              ? 'Thống kê'
               : 'Gia Đình'
           }
           onLogoClick={() => setShowSplash(true)}
           onOpenNotifications={() => showToastMessage('Bạn không có thông báo mới!')}
         />
 
-        {/* Dynamic Screen Content based on Active Tab */}
-        {activeTab === 'home' && (
-          <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollBody}>
-            {/* Greeting Header */}
-            <Greeting />
-
-            {/* Main Family Fund Hero Card */}
-            <FamilyFundCard balance={fundBalance} />
-
-            {/* Income & Expense Monthly Summary Cards */}
-            <MonthlySummary totalIncome={totalIncome} totalExpense={totalExpense} />
-
-            {/* Budget Progress Indicator */}
-            <BudgetProgress spent={totalExpense} totalBudget={totalBudget} />
-
-            {/* Quick Actions (Nộp quỹ, Thêm chi, Chuyển ví, Quét mã) */}
-            <QuickActions
-              onDeposit={() => setModalType('deposit')}
-              onAddExpense={() => setModalType('expense')}
-              onTransfer={() => setModalType('transfer')}
-              onScanQR={() => setModalType('qr')}
-            />
-
-            {/* Expense Breakdown Donut Chart */}
-            <ExpenseAllocation />
-
-            {/* Today Tasks */}
-            <TodayTasks
-              tasks={tasks}
-              onToggleTask={handleToggleTask}
-              onViewAll={() => setActiveTab('tasks')}
-            />
-
-            {/* Recent Transactions */}
-            <RecentTransactions
-              transactions={transactions}
-              onViewHistory={() => showToastMessage('Xem toàn bộ lịch sử giao dịch')}
-            />
-          </ScrollView>
-        )}
-
-        {activeTab === 'wallet' && (
-          <WalletTab
-            fundBalance={fundBalance}
-            onOpenDeposit={() => setModalType('deposit')}
-            onOpenTransfer={() => setModalType('transfer')}
-          />
-        )}
-
-        {activeTab === 'tasks' && (
-          <TasksTab
-            tasks={tasks}
-            members={members}
-            onToggleTask={handleToggleTask}
-            onAddTask={handleAddTask}
-          />
-        )}
-
-        {activeTab === 'family' && <FamilyTab members={members} />}
+        {renderActiveTabContent()}
 
         {/* Bottom Floating Navigation Bar */}
         <BottomNav
@@ -217,6 +213,7 @@ export function App() {
           onSubmitExpense={handleAddExpense}
           onSubmitDeposit={handleDeposit}
           onSubmitTransfer={handleTransfer}
+          onNavigateTab={setActiveTab}
         />
 
         {/* Toast Notification */}
