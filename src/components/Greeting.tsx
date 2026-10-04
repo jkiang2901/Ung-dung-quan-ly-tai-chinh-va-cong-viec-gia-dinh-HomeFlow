@@ -1,12 +1,16 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 
-export const Greeting: React.FC = () => {
+interface GreetingProps {
+  userName?: string;
+}
+
+export const Greeting: React.FC<GreetingProps> = ({ userName = 'bạn' }) => {
   return (
     <View style={styles.container}>
       <View>
         <Text style={styles.title}>
-          Chào buổi sáng! 👋
+          Chào {userName}! 👋
         </Text>
         <Text style={styles.subtitle}>
           Gia đình Hạnh Phúc <Text style={styles.dot}>•</Text> Tháng 10 ấm no

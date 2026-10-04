@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, SafeAreaView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Header } from './components/Header';
 import { Greeting } from './components/Greeting';
-import { FamilyFundCard } from './components/FamilyFundCard';
+import { PersonalWalletCard } from './components/PersonalWalletCard';
 import { MonthlySummary } from './components/MonthlySummary';
 import { BudgetProgress } from './components/BudgetProgress';
 import { QuickActions } from './components/QuickActions';
@@ -18,15 +18,19 @@ import { StatisticsTab } from './components/tabs/StatisticsTab';
 import { TasksTab } from './components/tabs/TasksTab';
 import { FamilyTab } from './components/tabs/FamilyTab';
 import { SplashScreen } from './components/SplashScreen';
+import { AuthScreen } from './components/auth/AuthScreen';
 import {
   INITIAL_MEMBERS,
   INITIAL_TRANSACTIONS,
   INITIAL_TASKS,
 } from './mockData';
-import type { Transaction, HouseholdTask } from './types';
+import type { Transaction, HouseholdTask, AuthUser } from './types';
 
 export function App() {
   const [showSplash, setShowSplash] = useState<boolean>(true);
+  // User state: null = chưa đăng nhập (hiển thị AuthScreen)
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [modalType, setModalType] = useState<ModalType>(null);
   const [fundBalance, setFundBalance] = useState<number>(48250000);
@@ -46,13 +50,30 @@ export function App() {
     }, 3000);
   };
 
+  const handleLoginSuccess = (user: AuthUser) => {
+    setCurrentUser(user);
+    showToastMessage(`Chào mừng ${user.name} đã đăng nhập thành công!`);
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    showToastMessage('Đã đăng xuất khỏi tài khoản');
+  };
+
   const renderActiveTabContent = () => {
     switch (activeTab) {
       case 'home':
         return (
           <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollBody}>
-            <Greeting />
-            <FamilyFundCard balance={fundBalance} />
+            <Greeting userName={currentUser?.name || 'bạn'} />
+            {/* Trang chủ: Hiện Ví tiền riêng của tài khoản */}
+            <PersonalWalletCard
+              userName={currentUser?.name || 'Cá nhân'}
+              balance={currentUser?.personalBalance ?? 18500000}
+              familyFundBalance={fundBalance}
+              onGoToFamilyFund={() => setActiveTab('wallet')}
+              onDepositToFund={() => setModalType('deposit')}
+            />
             <MonthlySummary totalIncome={totalIncome} totalExpense={totalExpense} />
             <BudgetProgress spent={totalExpense} totalBudget={totalBudget} />
             <QuickActions
@@ -73,9 +94,11 @@ export function App() {
           </ScrollView>
         );
       case 'wallet':
+        // Tab Ví tiền: Nơi quản lý QUỸ CHUNG GIA ĐÌNH
         return (
           <WalletTab
             fundBalance={fundBalance}
+            members={members}
             onOpenDeposit={() => setModalType('deposit')}
             onOpenTransfer={() => setModalType('transfer')}
           />
@@ -127,6 +150,14 @@ export function App() {
     setTransactions((prev) => [newTx, ...prev]);
     setFundBalance((prev) => prev - data.amount);
     setTotalExpense((prev) => prev + data.amount);
+
+    // Cập nhật số dư cá nhân nếu người chi tiêu là người dùng hiện tại
+    if (currentUser && data.user.includes(currentUser.name)) {
+      setCurrentUser((prev) =>
+        prev ? { ...prev, personalBalance: Math.max(0, prev.personalBalance - data.amount) } : null
+      );
+    }
+
     showToastMessage(`Đã thêm chi tiêu -${data.amount.toLocaleString('vi-VN')} đ cho ${data.title}`);
   };
 
@@ -147,6 +178,14 @@ export function App() {
     setTransactions((prev) => [newTx, ...prev]);
     setFundBalance((prev) => prev + data.amount);
     setTotalIncome((prev) => prev + data.amount);
+
+    // Giảm số dư cá nhân khi nộp vào quỹ chung
+    if (currentUser && data.user.includes(currentUser.name)) {
+      setCurrentUser((prev) =>
+        prev ? { ...prev, personalBalance: Math.max(0, prev.personalBalance - data.amount) } : null
+      );
+    }
+
     showToastMessage(`Đã nộp +${data.amount.toLocaleString('vi-VN')} đ vào Quỹ chung`);
   };
 
@@ -174,55 +213,67 @@ export function App() {
       <StatusBar style="dark" />
       {/* Initial Animated Splash Screen */}
       {showSplash && (
-        <SplashScreen onFinish={() => setShowSplash(false)} autoHideDuration={2400} />
+        <SplashScreen onFinish={() => setShowSplash(false)} autoHideDuration={2200} />
       )}
 
-      {/* Main Container */}
-      <View style={styles.innerContainer}>
-        {/* Header */}
-        <Header
-          members={members}
-          subtitle={
-            activeTab === 'home'
-              ? 'Trang Chủ'
-              : activeTab === 'tasks'
-              ? 'Công Việc'
-              : activeTab === 'wallet'
-              ? 'Ví Tiền'
-              : activeTab === 'statistics'
-              ? 'Thống kê'
-              : 'Gia Đình'
-          }
-          onLogoClick={() => setShowSplash(true)}
-          onOpenNotifications={() => showToastMessage('Bạn không có thông báo mới!')}
-        />
+      {/* Luồng hiển thị rõ ràng 3 tầng: Splash → Auth → App chính */}
+      {showSplash ? (
+        // Tầng 1: Splash Screen đang chạy, không render gì khác phía sau
+        null
+      ) : !currentUser ? (
+        // Tầng 2: Đã qua Splash nhưng chưa đăng nhập → Màn hình Auth
+        <AuthScreen onLoginSuccess={handleLoginSuccess} />
+      ) : (
+        // Tầng 3: Đã đăng nhập → Main App
+        <View style={styles.innerContainer}>
+          {/* Header */}
+          <Header
+            members={members}
+            currentUser={currentUser}
+            subtitle={
+              activeTab === 'home'
+                ? 'Trang Chủ'
+                : activeTab === 'tasks'
+                ? 'Công Việc'
+                : activeTab === 'wallet'
+                ? 'Ví Tiền & Quỹ Chung'
+                : activeTab === 'statistics'
+                ? 'Thống Kê'
+                : 'Gia Đình'
+            }
+            onLogoClick={() => setShowSplash(true)}
+            onOpenNotifications={() => showToastMessage('Bạn không có thông báo mới!')}
+            onLogout={handleLogout}
+            onOpenFamily={() => setActiveTab('family')}
+          />
 
-        {renderActiveTabContent()}
+          {renderActiveTabContent()}
 
-        {/* Bottom Floating Navigation Bar */}
-        <BottomNav
-          activeTab={activeTab}
-          onChangeTab={setActiveTab}
-          onOpenQuickAdd={() => setModalType('quick_add')}
-        />
+          {/* Bottom Floating Navigation Bar */}
+          <BottomNav
+            activeTab={activeTab}
+            onChangeTab={setActiveTab}
+            onOpenQuickAdd={() => setModalType('quick_add')}
+          />
 
-        {/* Action Modals */}
-        <ActionModal
-          type={modalType}
-          onClose={() => setModalType(null)}
-          onSubmitExpense={handleAddExpense}
-          onSubmitDeposit={handleDeposit}
-          onSubmitTransfer={handleTransfer}
-          onNavigateTab={setActiveTab}
-        />
+          {/* Action Modals */}
+          <ActionModal
+            type={modalType}
+            onClose={() => setModalType(null)}
+            onSubmitExpense={handleAddExpense}
+            onSubmitDeposit={handleDeposit}
+            onSubmitTransfer={handleTransfer}
+            onNavigateTab={setActiveTab}
+          />
+        </View>
+      )}
 
-        {/* Toast Notification */}
-        {toast && (
-          <View style={styles.toastContainer}>
-            <Text style={styles.toastText}>{toast}</Text>
-          </View>
-        )}
-      </View>
+      {/* Toast Notification */}
+      {toast && (
+        <View style={styles.toastContainer}>
+          <Text style={styles.toastText}>{toast}</Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 }

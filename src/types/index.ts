@@ -35,3 +35,14 @@ export interface FamilyMember {
   role: string;
   avatar: string;
 }
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role: string;
+  avatar: string;
+  personalBalance: number;
+}
+

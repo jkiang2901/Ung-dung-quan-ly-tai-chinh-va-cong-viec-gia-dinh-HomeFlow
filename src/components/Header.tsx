@@ -1,20 +1,26 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
-import { Bell, Home } from 'lucide-react-native';
-import type { FamilyMember } from '../types';
+import { Bell, Home, LogOut } from 'lucide-react-native';
+import type { FamilyMember, AuthUser } from '../types';
 
 interface HeaderProps {
   members: FamilyMember[];
+  currentUser?: AuthUser | null;
   subtitle?: string;
   onOpenNotifications?: () => void;
   onLogoClick?: () => void;
+  onLogout?: () => void;
+  onOpenFamily?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   members,
+  currentUser,
   subtitle = 'Trang Chủ',
   onOpenNotifications,
   onLogoClick,
+  onLogout,
+  onOpenFamily,
 }) => {
   return (
     <View style={styles.header}>
@@ -33,7 +39,7 @@ export const Header: React.FC<HeaderProps> = ({
         </View>
       </TouchableOpacity>
 
-      {/* Right Actions: Notifications & Avatars */}
+      {/* Right Actions: Notifications, Current User & Logout */}
       <View style={styles.rightActions}>
         {/* Notification Bell */}
         <TouchableOpacity
@@ -41,28 +47,47 @@ export const Header: React.FC<HeaderProps> = ({
           style={styles.bellButton}
           activeOpacity={0.7}
         >
-          <Bell size={20} color="#334155" />
+          <Bell size={19} color="#334155" />
           <View style={styles.unreadDot} />
         </TouchableOpacity>
 
-        {/* Member Avatars Stack */}
-        <View style={styles.avatarStack}>
-          {members.slice(0, 2).map((member, index) => (
-            <Image
-              key={member.id}
-              source={{ uri: member.avatar }}
-              style={[
-                styles.avatar,
-                index > 0 && { marginLeft: -8 },
-              ]}
-            />
-          ))}
-          {members.length > 2 && (
-            <View style={[styles.avatarMore, { marginLeft: -8 }]}>
-              <Text style={styles.avatarMoreText}>+{members.length - 2}</Text>
-            </View>
-          )}
-        </View>
+        {/* Current user avatar — bấm vào để xem màn hình Gia đình */}
+        {currentUser ? (
+          <View style={styles.userProfilePill}>
+            <TouchableOpacity
+              onPress={onOpenFamily}
+              activeOpacity={0.8}
+              style={styles.avatarButton}
+            >
+              <Image
+                source={{ uri: currentUser.avatar }}
+                style={styles.userAvatar}
+              />
+            </TouchableOpacity>
+            {onLogout && (
+              <TouchableOpacity
+                onPress={onLogout}
+                style={styles.logoutButton}
+                activeOpacity={0.7}
+              >
+                <LogOut size={15} color="#DC2626" />
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : (
+          <View style={styles.avatarStack}>
+            {members.slice(0, 2).map((member, index) => (
+              <Image
+                key={member.id}
+                source={{ uri: member.avatar }}
+                style={[
+                  styles.avatar,
+                  index > 0 && { marginLeft: -8 },
+                ]}
+              />
+            ))}
+          </View>
+        )}
       </View>
     </View>
   );
@@ -157,5 +182,31 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  userProfilePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F8FAFC',
+    padding: 3,
+    paddingRight: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  userAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#056839',
+  },
+  logoutButton: {
+    padding: 5,
+    borderRadius: 12,
+    backgroundColor: '#FEE2E2',
+  },
+  avatarButton: {
+    borderRadius: 16,
   },
 });

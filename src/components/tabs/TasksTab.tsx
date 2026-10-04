@@ -9,6 +9,7 @@ import {
   TextInput,
   Modal,
   TouchableWithoutFeedback,
+  Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import type { HouseholdTask, FamilyMember } from '../../types';
@@ -87,6 +88,8 @@ export const TasksTab: React.FC<TasksTabProps> = ({
   const [selectedMember, setSelectedMember] = useState(members[0]?.name || 'Bố Minh');
   const [taskPriority, setTaskPriority] = useState(false);
 
+  const isWeb = Platform.OS === 'web';
+
   const formatDateText = (date: Date) =>
     date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
@@ -95,6 +98,51 @@ export const TasksTab: React.FC<TasksTabProps> = ({
 
   const formatTaskTimeText = (date: Date, time: Date) =>
     `${formatDateText(date)} • ${formatTimeText(time)}`;
+
+  const openWebDateTimePicker = () => {
+    if (typeof document === 'undefined') return;
+
+    const input = document.createElement('input');
+    input.type = 'datetime-local';
+    const localDateTimeValue = new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16);
+    input.value = localDateTimeValue;
+    document.body.appendChild(input);
+
+    const cleanup = () => {
+      input.remove();
+    };
+
+    const handlePick = () => {
+      const raw = input.value;
+      cleanup();
+      if (!raw) return;
+
+      const [datePart, timePart] = raw.split('T');
+      if (!datePart || !timePart) return;
+
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hours, minutes] = timePart.split(':').map(Number);
+      const nextDate = new Date(year, month - 1, day, hours, minutes);
+      setSelectedDate(nextDate);
+      setSelectedTime(nextDate);
+      setNewTaskTime(formatTaskTimeText(nextDate, nextDate));
+    };
+
+    input.addEventListener('change', handlePick);
+    input.addEventListener('cancel', cleanup);
+    input.showPicker?.();
+    input.click();
+  };
+
+  const handleOpenDateTimePicker = () => {
+    if (isWeb) {
+      openWebDateTimePicker();
+      return;
+    }
+    setShowDatePicker(true);
+  };
 
   useEffect(() => {
     if (tasks.length > 0) {
@@ -272,13 +320,13 @@ export const TasksTab: React.FC<TasksTabProps> = ({
                     <Text style={styles.label}>Thời gian</Text>
                     <TouchableOpacity
                       style={styles.input}
-                      onPress={() => setShowDatePicker(true)}
+                      onPress={handleOpenDateTimePicker}
                     >
                       <Text style={styles.dateTimeText}>
                         {newTaskTime || 'Chọn ngày và giờ'}
                       </Text>
                     </TouchableOpacity>
-                    {showDatePicker && (
+                    {!isWeb && showDatePicker && (
                       <DateTimePicker
                         value={selectedDate}
                         mode="date"
@@ -293,7 +341,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
                         }}
                       />
                     )}
-                    {showTimePicker && (
+                    {!isWeb && showTimePicker && (
                       <DateTimePicker
                         value={selectedTime}
                         mode="time"

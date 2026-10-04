@@ -5,7 +5,6 @@ import {
   Wallet,
   BarChart3,
   CheckSquare,
-  Users,
   Plus,
 } from 'lucide-react-native';
 
@@ -27,7 +26,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     { id: 'wallet' as TabType, label: 'Ví tiền', icon: Wallet },
     { id: 'statistics' as TabType, label: 'Thống kê', icon: BarChart3 },
     { id: 'tasks' as TabType, label: 'Công việc', icon: CheckSquare },
-    { id: 'family' as TabType, label: 'Gia đình', icon: Users },
   ];
 
   return (
