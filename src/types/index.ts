@@ -3,6 +3,7 @@ export interface Transaction {
   title: string;
   user: string;
   time: string;
+  date?: string;
   amount: number;
   type: 'expense' | 'income';
   category: string;

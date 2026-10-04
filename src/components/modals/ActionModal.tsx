@@ -8,18 +8,42 @@ import {
   ScrollView,
   StyleSheet,
   TouchableWithoutFeedback,
+  Platform,
 } from 'react-native';
 import { X, PiggyBank, ReceiptText, ArrowLeftRight, QrCode, Check } from 'lucide-react-native';
+
+const DateTimePicker = (() => {
+  try {
+    return require('@react-native-community/datetimepicker').default;
+  } catch {
+    return null;
+  }
+})();
 
 export type ModalType = 'deposit' | 'expense' | 'transfer' | 'qr' | 'quick_add' | null;
 
 interface ActionModalProps {
   type: ModalType;
   onClose: () => void;
-  onSubmitExpense: (data: { title: string; amount: number; category: string; user: string }) => void;
-  onSubmitDeposit: (data: { amount: number; user: string; note: string }) => void;
-  onSubmitTransfer: (data: { from: string; to: string; amount: number }) => void;
+  onSubmitExpense: (data: { title: string; amount: number; category: string; user: string; dateTime?: string }) => void;
+  onSubmitDeposit: (data: { amount: number; user: string; note: string; dateTime?: string }) => void;
+  onSubmitTransfer: (data: { from: string; to: string; amount: number; dateTime?: string }) => void;
 }
+
+const formatDateTimeValue = (date: Date) => {
+  const datePart = date.toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+  const timePart = date.toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+
+  return `${datePart} - ${timePart}`;
+};
 
 export const ActionModal: React.FC<ActionModalProps> = ({
   type,
@@ -36,8 +60,87 @@ export const ActionModal: React.FC<ActionModalProps> = ({
   const [toWallet, setToWallet] = useState<string>('Quỹ gia đình chung');
   const [note, setNote] = useState<string>('');
   const [scanned, setScanned] = useState<boolean>(false);
+  const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
+  const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedTime, setSelectedTime] = useState<Date>(new Date());
+  const [dateTimeValue, setDateTimeValue] = useState<string>(formatDateTimeValue(new Date()));
+  const isWeb = Platform.OS === 'web';
 
   if (!type) return null;
+
+  const openWebDateTimePicker = () => {
+    if (typeof document === 'undefined') return;
+
+    const input = document.createElement('input');
+    input.type = 'datetime-local';
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    input.style.pointerEvents = 'none';
+    input.style.left = '-9999px';
+    input.style.top = '-9999px';
+
+    const now = new Date();
+    const localDateTimeValue = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
+      now.getDate()
+    ).padStart(2, '0')}T${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(
+      2,
+      '0'
+    )}`;
+    input.value = localDateTimeValue;
+    document.body.appendChild(input);
+
+    const cleanup = () => {
+      input.remove();
+    };
+
+    const handlePick = () => {
+      const raw = input.value;
+      cleanup();
+      if (!raw) return;
+
+      const [datePart, timePart] = raw.split('T');
+      if (!datePart || !timePart) return;
+
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hours, minutes] = timePart.split(':').map(Number);
+      const nextDate = new Date(year, month - 1, day, hours, minutes);
+      setSelectedDate(nextDate);
+      setSelectedTime(nextDate);
+      setDateTimeValue(formatDateTimeValue(nextDate));
+    };
+
+    input.addEventListener('change', handlePick);
+    input.addEventListener('cancel', cleanup);
+    input.showPicker?.();
+    input.click();
+  };
+
+  const openDateTimePicker = () => {
+    if (isWeb) {
+      openWebDateTimePicker();
+      return;
+    }
+
+    setSelectedDate(new Date());
+    setSelectedTime(new Date());
+    setShowDatePicker(true);
+    setShowTimePicker(false);
+  };
+
+  const handleConfirmDateTime = () => {
+    const finalDate = new Date(
+      selectedDate.getFullYear(),
+      selectedDate.getMonth(),
+      selectedDate.getDate(),
+      selectedTime.getHours(),
+      selectedTime.getMinutes()
+    );
+
+    setDateTimeValue(formatDateTimeValue(finalDate));
+    setShowDatePicker(false);
+    setShowTimePicker(false);
+  };
 
   const handleSubmit = () => {
     const numAmount = parseFloat(amount.replace(/\D/g, '')) || 0;
@@ -48,18 +151,21 @@ export const ActionModal: React.FC<ActionModalProps> = ({
         amount: numAmount,
         category,
         user,
+        dateTime: dateTimeValue,
       });
     } else if (type === 'deposit') {
       onSubmitDeposit({
         amount: numAmount,
         user,
         note,
+        dateTime: dateTimeValue,
       });
     } else if (type === 'transfer') {
       onSubmitTransfer({
         from: fromWallet,
         to: toWallet,
         amount: numAmount,
+        dateTime: dateTimeValue,
       });
     }
     onClose();
@@ -233,6 +339,65 @@ export const ActionModal: React.FC<ActionModalProps> = ({
                             </ScrollView>
                           </View>
                         </View>
+                      </View>
+                    )}
+
+                    {/* Date & Time picker */}
+                    {(type === 'expense' || type === 'quick_add' || type === 'deposit' || type === 'transfer') && (
+                      <View style={styles.fieldGroup}>
+                        <Text style={styles.label}>Ngày & giờ</Text>
+                        <TouchableOpacity
+                          style={styles.dateTimeField}
+                          onPress={openDateTimePicker}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={styles.dateTimeText}>{dateTimeValue}</Text>
+                        </TouchableOpacity>
+
+                        {!isWeb && showDatePicker && (
+                          <View style={styles.pickerWrapper}>
+                            <DateTimePicker
+                              value={selectedDate}
+                              mode="date"
+                              display="spinner"
+                              onChange={(_event: any, date?: Date) => {
+                                if (_event.type === 'dismissed') {
+                                  setShowDatePicker(false);
+                                  return;
+                                }
+
+                                if (date) {
+                                  setSelectedDate(date);
+                                  setShowDatePicker(false);
+                                  setShowTimePicker(true);
+                                }
+                              }}
+                            />
+                          </View>
+                        )}
+
+                        {!isWeb && showTimePicker && (
+                          <View style={styles.pickerWrapper}>
+                            <DateTimePicker
+                              value={selectedTime}
+                              mode="time"
+                              display="spinner"
+                              onChange={(_event: any, time?: Date) => {
+                                if (_event.type === 'dismissed') {
+                                  setShowTimePicker(false);
+                                  return;
+                                }
+
+                                if (time) {
+                                  setSelectedTime(time);
+                                }
+                              }}
+                            />
+                            <TouchableOpacity style={styles.doneButton} onPress={handleConfirmDateTime}>
+                              <Text style={styles.doneButtonText}>Xong</Text>
+                            </TouchableOpacity>
+                          </View>
+                        )}
                       </View>
                     )}
 
@@ -417,6 +582,40 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 12,
+  },
+  dateTimeField: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  dateTimeText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  pickerWrapper: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    paddingVertical: 8,
+    overflow: 'hidden',
+  },
+  doneButton: {
+    backgroundColor: '#056839',
+    marginHorizontal: 12,
+    marginBottom: 8,
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  doneButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
   },
   textInput: {
     fontSize: 14,

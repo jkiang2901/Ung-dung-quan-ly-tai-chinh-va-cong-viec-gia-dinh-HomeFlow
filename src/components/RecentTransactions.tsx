@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import type { Transaction } from '../types';
 import { ShoppingBag, Landmark, Baby, CreditCard, Tag } from 'lucide-react-native';
@@ -8,14 +8,59 @@ interface RecentTransactionsProps {
   onViewHistory?: () => void;
 }
 
+const parseDateFromValue = (value?: string) => {
+  if (!value) return new Date(0);
+
+  if (value.includes(' - ')) {
+    return parseDateFromValue(value.split(' - ')[0]);
+  }
+
+  if (value.includes('/')) {
+    const [day, month, year] = value.split('/').map(Number);
+    if (day && month && year) {
+      return new Date(year, month - 1, day);
+    }
+  }
+
+  return new Date(0);
+};
+
 export const RecentTransactions: React.FC<RecentTransactionsProps> = ({
   transactions,
   onViewHistory,
 }) => {
+  const [showAll, setShowAll] = useState(false);
+
+  const groupedTransactions = useMemo(() => {
+    const sorted = [...transactions].sort((a, b) => {
+      const dateA = parseDateFromValue(a.date).getTime();
+      const dateB = parseDateFromValue(b.date).getTime();
+      return dateB - dateA;
+    });
+
+    const groups = new Map<string, Transaction[]>();
+
+    sorted.forEach((tx) => {
+      const key = tx.date || 'Khác';
+      const group = groups.get(key) ?? [];
+      group.push(tx);
+      groups.set(key, group);
+    });
+
+    return Array.from(groups.entries());
+  }, [transactions]);
+
+  const visibleGroups = showAll ? groupedTransactions : groupedTransactions.slice(0, 3);
+
   const formatMoney = (val: number) => {
     const isIncome = val > 0;
     const absVal = Math.abs(val).toLocaleString('vi-VN');
     return `${isIncome ? '+' : '-'}${absVal} đ`;
+  };
+
+  const handleToggleHistory = () => {
+    onViewHistory?.();
+    setShowAll((prev) => !prev);
   };
 
   const getIcon = (type: Transaction['iconType']) => {
@@ -49,65 +94,65 @@ export const RecentTransactions: React.FC<RecentTransactionsProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.sectionTitle}>Giao dịch gần đây</Text>
-        <TouchableOpacity onPress={onViewHistory} activeOpacity={0.7}>
-          <Text style={styles.viewHistoryText}>Lịch sử ›</Text>
+        <TouchableOpacity onPress={handleToggleHistory} activeOpacity={0.7}>
+          <Text style={styles.viewHistoryText}>{showAll ? 'Thu gọn' : 'Lịch sử ›'}</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Transaction Items */}
       <View style={styles.txList}>
-        {transactions.map((tx) => {
-          const iconConfig = getIcon(tx.iconType);
-          const IconComp = iconConfig.icon;
-          const isIncome = tx.amount > 0;
+        {visibleGroups.map(([dateKey, txGroup]) => (
+          <View key={dateKey} style={styles.dayGroup}>
+            <Text style={styles.dayLabel}>{dateKey}</Text>
+            {txGroup.map((tx) => {
+              const iconConfig = getIcon(tx.iconType);
+              const IconComp = iconConfig.icon;
+              const isIncome = tx.amount > 0;
 
-          return (
-            <View key={tx.id} style={styles.txCard}>
-              <View style={styles.txLeft}>
-                {/* Category Icon */}
-                <View
-                  style={[
-                    styles.iconWrapper,
-                    { backgroundColor: iconConfig.bg },
-                  ]}
-                >
-                  <IconComp size={22} color={iconConfig.color} strokeWidth={2.2} />
-                </View>
+              return (
+                <View key={tx.id} style={styles.txCard}>
+                  <View style={styles.txLeft}>
+                    <View
+                      style={[
+                        styles.iconWrapper,
+                        { backgroundColor: iconConfig.bg },
+                      ]}
+                    >
+                      <IconComp size={22} color={iconConfig.color} strokeWidth={2.2} />
+                    </View>
 
-                {/* Details */}
-                <View style={styles.txDetails}>
-                  <Text style={styles.txTitle} numberOfLines={1}>
-                    {tx.title}
-                  </Text>
-                  <View style={styles.txSubDetails}>
-                    <Text style={styles.txUser}>{tx.user}</Text>
-                    <Text style={styles.dot}>•</Text>
-                    <Text style={styles.txTime}>{tx.time}</Text>
+                    <View style={styles.txDetails}>
+                      <Text style={styles.txTitle} numberOfLines={1}>
+                        {tx.title}
+                      </Text>
+                      <View style={styles.txSubDetails}>
+                        <Text style={styles.txUser}>{tx.user}</Text>
+                        <Text style={styles.dot}>•</Text>
+                        <Text style={styles.txTime}>{tx.time}</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.txRight}>
+                    <Text
+                      style={[
+                        styles.txAmount,
+                        { color: isIncome ? '#059669' : '#0F172A' },
+                      ]}
+                    >
+                      {formatMoney(tx.amount)}
+                    </Text>
+                    <View style={styles.categoryRow}>
+                      <Tag size={12} color="#94A3B8" />
+                      <Text style={styles.categoryText}>{tx.category}</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-
-              {/* Amount & Category label */}
-              <View style={styles.txRight}>
-                <Text
-                  style={[
-                    styles.txAmount,
-                    { color: isIncome ? '#059669' : '#0F172A' },
-                  ]}
-                >
-                  {formatMoney(tx.amount)}
-                </Text>
-                <View style={styles.categoryRow}>
-                  <Tag size={12} color="#94A3B8" />
-                  <Text style={styles.categoryText}>{tx.category}</Text>
-                </View>
-              </View>
-            </View>
-          );
-        })}
+              );
+            })}
+          </View>
+        ))}
       </View>
     </View>
   );
@@ -137,7 +182,18 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   txList: {
-    gap: 10,
+    gap: 12,
+  },
+  dayGroup: {
+    gap: 8,
+  },
+  dayLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    paddingHorizontal: 6,
   },
   txCard: {
     padding: 16,

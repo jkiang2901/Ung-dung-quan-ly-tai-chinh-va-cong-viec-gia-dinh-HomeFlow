@@ -60,11 +60,13 @@ export function App() {
 
   // Handle adding expense
   const handleAddExpense = (data: { title: string; amount: number; category: string; user: string; dateTime?: string }) => {
+    const displayDate = data.dateTime ? data.dateTime.split(' - ')[0] : new Date().toLocaleDateString('vi-VN');
     const newTx: Transaction = {
       id: `tx-${Date.now()}`,
       title: data.title,
       user: data.user,
-      time: data.dateTime || 'Vừa xong',
+      time: data.dateTime ? data.dateTime.split(' - ')[1] || 'Vừa xong' : 'Vừa xong',
+      date: displayDate,
       amount: -data.amount,
       type: 'expense',
       category: data.category,
@@ -78,11 +80,13 @@ export function App() {
 
   // Handle deposit to fund
   const handleDeposit = (data: { amount: number; user: string; note: string; dateTime?: string }) => {
+    const displayDate = data.dateTime ? data.dateTime.split(' - ')[0] : new Date().toLocaleDateString('vi-VN');
     const newTx: Transaction = {
       id: `tx-${Date.now()}`,
       title: `Nộp quỹ: ${data.note || 'Đóng góp gia đình'}`,
       user: data.user,
-      time: data.dateTime || 'Vừa xong',
+      time: data.dateTime ? data.dateTime.split(' - ')[1] || 'Vừa xong' : 'Vừa xong',
+      date: displayDate,
       amount: data.amount,
       type: 'income',
       category: 'Quỹ chung',
@@ -95,7 +99,21 @@ export function App() {
   };
 
   // Handle transfer wallet
-  const handleTransfer = (data: { from: string; to: string; amount: number }) => {
+  const handleTransfer = (data: { from: string; to: string; amount: number; dateTime?: string }) => {
+    const displayDate = data.dateTime ? data.dateTime.split(' - ')[0] : new Date().toLocaleDateString('vi-VN');
+    const newTx: Transaction = {
+      id: `tx-${Date.now()}`,
+      title: `Chuyển tiền: ${data.from} → ${data.to}`,
+      user: data.from,
+      time: data.dateTime ? data.dateTime.split(' - ')[1] || 'Vừa xong' : 'Vừa xong',
+      date: displayDate,
+      amount: -data.amount,
+      type: 'expense',
+      category: 'Chuyển ví',
+      iconType: 'general',
+    };
+
+    setTransactions((prev) => [newTx, ...prev]);
     showToastMessage(`Đã chuyển ${data.amount.toLocaleString('vi-VN')} đ từ ${data.from} đến ${data.to}`);
   };
 
