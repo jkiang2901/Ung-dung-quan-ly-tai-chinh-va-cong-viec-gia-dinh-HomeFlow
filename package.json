@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@expo/metro-runtime": "^57.0.16",
+    "@react-native-community/datetimepicker": "^8.2.0",
     "expo": "~52.0.35",
     "expo-status-bar": "^57.0.1",
     "lucide-react-native": "^1.48.0",
