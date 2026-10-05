@@ -1,13 +1,19 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, ScrollView, StyleSheet } from 'react-native';
-import type { FamilyMember } from '../../types';
-import { UserPlus, ShieldCheck, Heart } from 'lucide-react-native';
+import type { FamilyMember, RoleType } from '../../types';
+import { UserPlus, ShieldCheck, Heart, UserCheck } from 'lucide-react-native';
 
 interface FamilyTabProps {
   members: FamilyMember[];
+  userRole?: RoleType;
+  onOpenInviteModal?: () => void;
 }
 
-export const FamilyTab: React.FC<FamilyTabProps> = ({ members }) => {
+export const FamilyTab: React.FC<FamilyTabProps> = ({
+  members,
+  userRole = 'OWNER',
+  onOpenInviteModal,
+}) => {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
@@ -18,7 +24,11 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({ members }) => {
             Tổ ấm: Gia đình Hạnh Phúc ({members.length} người)
           </Text>
         </View>
-        <TouchableOpacity style={styles.inviteButton} activeOpacity={0.8}>
+        <TouchableOpacity
+          onPress={onOpenInviteModal}
+          style={styles.inviteButton}
+          activeOpacity={0.8}
+        >
           <UserPlus size={14} color="#FFFFFF" />
           <Text style={styles.inviteText}>Mời người thân</Text>
         </TouchableOpacity>
@@ -39,23 +49,52 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({ members }) => {
 
       {/* Members List */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Danh sách thành viên</Text>
+        <Text style={styles.sectionTitle}>Danh sách thành viên ({members.length})</Text>
         <View style={styles.memberList}>
           {members.map((m) => (
             <View key={m.id} style={styles.memberCard}>
               <View style={styles.memberLeft}>
                 <Image source={{ uri: m.avatar }} style={styles.avatar} />
-                <View>
+                <View style={{ flex: 1 }}>
                   <Text style={styles.memberName}>{m.name}</Text>
+                  {m.email && <Text style={styles.memberEmail}>{m.email}</Text>}
                   <View style={styles.roleRow}>
                     <ShieldCheck size={14} color="#056839" />
-                    <Text style={styles.roleText}>{m.role}</Text>
+                    <Text style={styles.roleText}>{m.roleLabel || m.role}</Text>
                   </View>
                 </View>
               </View>
 
-              <View style={styles.syncedBadge}>
-                <Text style={styles.syncedText}>Đã đồng bộ</Text>
+              <View style={styles.roleTagBox}>
+                <View
+                  style={[
+                    styles.roleBadge,
+                    {
+                      backgroundColor:
+                        m.role === 'OWNER'
+                          ? '#ECFDF5'
+                          : m.role === 'MEMBER'
+                          ? '#EFF6FF'
+                          : '#FEF3C7',
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.roleBadgeText,
+                      {
+                        color:
+                          m.role === 'OWNER'
+                            ? '#056839'
+                            : m.role === 'MEMBER'
+                            ? '#2563EB'
+                            : '#D97706',
+                      },
+                    ]}
+                  >
+                    {m.role}
+                  </Text>
+                </View>
               </View>
             </View>
           ))}
@@ -66,18 +105,22 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({ members }) => {
       <View style={styles.infoBox}>
         <View style={styles.infoTitleRow}>
           <ShieldCheck size={16} color="#056839" />
-          <Text style={styles.infoTitle}>Quyền hạn & Phân quyền</Text>
+          <Text style={styles.infoTitle}>Phân quyền theo vai trò (Role Permission)</Text>
         </View>
         <Text style={styles.infoBullet}>
-          • Quản trị viên (Bố Minh): Có quyền duyệt ngân sách & điều chuyển tiền từ Quỹ chung.
+          • <Text style={{ fontWeight: '800', color: '#056839' }}>OWNER (Bố Minh)</Text>: Toàn quyền quản lý ví, thêm/sửa/xóa ví, nạp quỹ, chuyển tiền, cài đặt hạn mức, mời người thân và xem sao kê.
         </Text>
         <Text style={styles.infoBullet}>
-          • Quản lý thu chi (Mẹ Lan): Thêm thu chi, quản lý việc nhà & duyệt thanh toán hoá đơn.
+          • <Text style={{ fontWeight: '800', color: '#2563EB' }}>MEMBER (Mẹ Lan)</Text>: Được xem ví, tạo thu chi, thực hiện chuyển tiền nếu được cấp quyền. Không quản lý ví hay phân quyền.
+        </Text>
+        <Text style={styles.infoBullet}>
+          • <Text style={{ fontWeight: '800', color: '#D97706' }}>VIEWER (Bé Bi)</Text>: Chỉ xem thông tin ví và sao kê. Không thể tạo hay chỉnh sửa bất kỳ ví hay giao dịch nào.
         </Text>
       </View>
     </ScrollView>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {
@@ -198,6 +241,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#0F172A',
   },
+  memberEmail: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 1,
+  },
   roleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -209,18 +257,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#64748B',
   },
-  syncedBadge: {
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
+  roleTagBox: {
+    alignItems: 'flex-end',
   },
-  syncedText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#056839',
+  roleBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  roleBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
   },
   infoBox: {
     padding: 16,
