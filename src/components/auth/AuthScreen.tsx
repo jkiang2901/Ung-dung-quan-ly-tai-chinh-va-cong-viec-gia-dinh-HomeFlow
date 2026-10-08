@@ -36,20 +36,32 @@ export const DEMO_ACCOUNTS: AuthUser[] = [
   {
     id: 'm1',
     name: 'Bố Minh',
-    email: 'minh.nguyen@homeflow.vn',
+    email: 'owner@test.com',
     phone: '0901234567',
-    role: 'Quản trị viên gia đình',
+    role: 'OWNER',
+    roleLabel: 'Chủ Hộ Gia Đình',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
     personalBalance: 18500000,
   },
   {
     id: 'm2',
     name: 'Mẹ Lan',
-    email: 'lan.tran@homeflow.vn',
+    email: 'member@test.com',
     phone: '0912345678',
-    role: 'Quản lý thu chi',
+    role: 'MEMBER',
+    roleLabel: 'Thành Viên Gia Đình',
     avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=250',
     personalBalance: 12800000,
+  },
+  {
+    id: 'm3',
+    name: 'Bé Bi',
+    email: 'viewer@test.com',
+    phone: '0923456789',
+    role: 'VIEWER',
+    roleLabel: 'Trẻ Em',
+    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=250',
+    personalBalance: 2000000,
   },
 ];
 
@@ -57,7 +69,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const [mode, setMode] = useState<AuthMode>('login');
 
   // Login form state
-  const [loginEmail, setLoginEmail] = useState('minh.nguyen@homeflow.vn');
+  const [loginEmail, setLoginEmail] = useState('owner@test.com');
   const [loginPassword, setLoginPassword] = useState('123456');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
@@ -113,7 +125,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       id: 'user_' + Date.now(),
       name: loginEmail.includes('@') ? loginEmail.split('@')[0] : 'Thành viên',
       email: loginEmail.trim(),
-      role: 'Thành viên gia đình',
+      role: 'MEMBER',
+      roleLabel: 'Thành Viên Gia Đình',
       avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=250',
       personalBalance: 15000000,
     };
@@ -146,7 +159,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       name: regName.trim(),
       email: regEmail.trim(),
       phone: regPhone.trim() || undefined,
-      role: regRole,
+      role: regRole.includes('Chủ Hộ') || regRole.includes('Bố') ? 'OWNER' : regRole.includes('Trẻ') ? 'VIEWER' : 'MEMBER',
+      roleLabel: regRole,
       avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=250',
       personalBalance: 10000000,
     };
@@ -194,7 +208,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     }, 1200);
   };
 
-  const roles = ['Bố (Chủ hộ)', 'Mẹ (Nội trợ)', 'Con cái', 'Ông / Bà', 'Thành viên'];
+  const roles = ['Chủ Hộ Gia Đình', 'Thành Viên Gia Đình', 'Trẻ Em'];
 
   return (
     <KeyboardAvoidingView
@@ -335,7 +349,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                       activeOpacity={0.7}
                     >
                       <Sparkles size={14} color="#056839" />
-                      <Text style={styles.demoPillText}>{acc.name} ({acc.role.split(' ')[0]})</Text>
+                      <Text style={styles.demoPillText}>
+                        {acc.name} ({acc.role === 'OWNER' ? 'Chủ Hộ' : acc.role === 'MEMBER' ? 'Thành Viên' : 'Trẻ Em'})
+                      </Text>
                     </TouchableOpacity>
                   ))}
                 </View>

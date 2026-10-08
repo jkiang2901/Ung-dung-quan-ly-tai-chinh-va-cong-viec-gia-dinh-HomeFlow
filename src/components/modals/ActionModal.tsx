@@ -20,14 +20,20 @@ const DateTimePicker = (() => {
   }
 })();
 
+import type { Wallet, RoleType } from '../../types';
+import { ShieldAlert } from 'lucide-react-native';
+
 export type ModalType = 'deposit' | 'expense' | 'transfer' | 'qr' | 'quick_add' | null;
 
 interface ActionModalProps {
   type: ModalType;
+  wallets?: Wallet[];
+  userRole?: RoleType;
   onClose: () => void;
-  onSubmitExpense: (data: { title: string; amount: number; category: string; user: string; dateTime?: string }) => void;
-  onSubmitDeposit: (data: { amount: number; user: string; note: string; dateTime?: string }) => void;
-  onSubmitTransfer: (data: { from: string; to: string; amount: number; dateTime?: string }) => void;
+  onSubmitExpense: (data: { title: string; amount: number; category: string; user: string; sourceWalletId?: string; dateTime?: string }) => void;
+  onSubmitDeposit: (data: { amount: number; user: string; note: string; sourceWalletId?: string; dateTime?: string }) => void;
+  onSubmitTransfer: (data: { fromWalletId: string; toWalletId: string; amount: number; note?: string; dateTime?: string }) => void;
+  onNavigateTab?: (tab: any) => void;
 }
 
 const formatDateTimeValue = (date: Date) => {
@@ -47,19 +53,27 @@ const formatDateTimeValue = (date: Date) => {
 
 export const ActionModal: React.FC<ActionModalProps> = ({
   type,
+  wallets = [],
+  userRole = 'OWNER',
   onClose,
   onSubmitExpense,
   onSubmitDeposit,
   onSubmitTransfer,
 }) => {
+  const activeWallets = wallets.filter((w) => w.active);
   const [amount, setAmount] = useState<string>('');
   const [title, setTitle] = useState<string>('');
   const [category, setCategory] = useState<string>('Ăn uống gia đình');
   const [user, setUser] = useState<string>('Mẹ Lan');
-  const [fromWallet, setFromWallet] = useState<string>('Ví Mẹ Lan');
-  const [toWallet, setToWallet] = useState<string>('Quỹ gia đình chung');
+
+  const [fromWalletId, setFromWalletId] = useState<string>(activeWallets[1]?.id || activeWallets[0]?.id || '');
+  const [toWalletId, setToWalletId] = useState<string>(activeWallets[2]?.id || activeWallets[0]?.id || '');
+  const [depositSourceId, setDepositSourceId] = useState<string>(activeWallets[1]?.id || activeWallets[0]?.id || '');
+
   const [note, setNote] = useState<string>('');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [scanned, setScanned] = useState<boolean>(false);
+
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -69,81 +83,19 @@ export const ActionModal: React.FC<ActionModalProps> = ({
 
   if (!type) return null;
 
-  const openWebDateTimePicker = () => {
-    if (typeof document === 'undefined') return;
+  const handleSubmit = () => {
+    setErrorMsg(null);
 
-    const input = document.createElement('input');
-    input.type = 'datetime-local';
-    input.style.position = 'fixed';
-    input.style.opacity = '0';
-    input.style.pointerEvents = 'none';
-    input.style.left = '-9999px';
-    input.style.top = '-9999px';
-
-    const now = new Date();
-    const localDateTimeValue = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
-      now.getDate()
-    ).padStart(2, '0')}T${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(
-      2,
-      '0'
-    )}`;
-    input.value = localDateTimeValue;
-    document.body.appendChild(input);
-
-    const cleanup = () => {
-      input.remove();
-    };
-
-    const handlePick = () => {
-      const raw = input.value;
-      cleanup();
-      if (!raw) return;
-
-      const [datePart, timePart] = raw.split('T');
-      if (!datePart || !timePart) return;
-
-      const [year, month, day] = datePart.split('-').map(Number);
-      const [hours, minutes] = timePart.split(':').map(Number);
-      const nextDate = new Date(year, month - 1, day, hours, minutes);
-      setSelectedDate(nextDate);
-      setSelectedTime(nextDate);
-      setDateTimeValue(formatDateTimeValue(nextDate));
-    };
-
-    input.addEventListener('change', handlePick);
-    input.addEventListener('cancel', cleanup);
-    input.showPicker?.();
-    input.click();
-  };
-
-  const openDateTimePicker = () => {
-    if (isWeb) {
-      openWebDateTimePicker();
+    if (userRole === 'VIEWER') {
+      setErrorMsg('Tài khoản Trẻ Em không có quyền thực hiện giao dịch.');
       return;
     }
 
-    setSelectedDate(new Date());
-    setSelectedTime(new Date());
-    setShowDatePicker(true);
-    setShowTimePicker(false);
-  };
-
-  const handleConfirmDateTime = () => {
-    const finalDate = new Date(
-      selectedDate.getFullYear(),
-      selectedDate.getMonth(),
-      selectedDate.getDate(),
-      selectedTime.getHours(),
-      selectedTime.getMinutes()
-    );
-
-    setDateTimeValue(formatDateTimeValue(finalDate));
-    setShowDatePicker(false);
-    setShowTimePicker(false);
-  };
-
-  const handleSubmit = () => {
     const numAmount = parseFloat(amount.replace(/\D/g, '')) || 0;
+    if (numAmount <= 0) {
+      setErrorMsg('Vui lòng nhập số tiền hợp lệ (> 0 đ).');
+      return;
+    }
 
     if (type === 'expense' || type === 'quick_add') {
       onSubmitExpense({
@@ -151,35 +103,73 @@ export const ActionModal: React.FC<ActionModalProps> = ({
         amount: numAmount,
         category,
         user,
+        sourceWalletId: fromWalletId,
         dateTime: dateTimeValue,
       });
+      onClose();
     } else if (type === 'deposit') {
+      const sourceW = activeWallets.find((w) => w.id === depositSourceId);
+      if (!sourceW) {
+        setErrorMsg('Vui lòng chọn nguồn tiền nạp quỹ.');
+        return;
+      }
+      if (sourceW.balance < numAmount) {
+        setErrorMsg(`Số dư ví "${sourceW.name}" không đủ (${sourceW.balance.toLocaleString('vi-VN')} đ).`);
+        return;
+      }
+
       onSubmitDeposit({
         amount: numAmount,
         user,
-        note,
+        note: note || 'Nộp quỹ gia đình',
+        sourceWalletId: depositSourceId,
         dateTime: dateTimeValue,
       });
+      onClose();
     } else if (type === 'transfer') {
+      if (!fromWalletId) {
+        setErrorMsg('Vui lòng chọn Ví nguồn.');
+        return;
+      }
+      if (!toWalletId) {
+        setErrorMsg('Vui lòng chọn Ví đích.');
+        return;
+      }
+      if (fromWalletId === toWalletId) {
+        setErrorMsg('Ví nguồn và ví đích không được giống nhau.');
+        return;
+      }
+
+      const sourceW = activeWallets.find((w) => w.id === fromWalletId);
+      if (!sourceW) {
+        setErrorMsg('Ví nguồn không hợp lệ.');
+        return;
+      }
+      if (sourceW.balance < numAmount) {
+        setErrorMsg(`Số dư ví nguồn "${sourceW.name}" không đủ (${sourceW.balance.toLocaleString('vi-VN')} đ).`);
+        return;
+      }
+
       onSubmitTransfer({
-        from: fromWallet,
-        to: toWallet,
+        fromWalletId,
+        toWalletId,
         amount: numAmount,
+        note: note || 'Chuyển tiền nội bộ',
         dateTime: dateTimeValue,
       });
+      onClose();
     }
-    onClose();
   };
 
   const getTitle = () => {
     switch (type) {
       case 'deposit':
-        return { text: 'Nộp quỹ gia đình', icon: PiggyBank, color: '#056839' };
+        return { text: 'Nạp quỹ gia đình chung', icon: PiggyBank, color: '#056839' };
       case 'expense':
       case 'quick_add':
         return { text: 'Thêm khoản chi mới', icon: ReceiptText, color: '#EA580C' };
       case 'transfer':
-        return { text: 'Chuyển tiền giữa các ví', icon: ArrowLeftRight, color: '#0891B2' };
+        return { text: 'Chuyển tiền nội bộ', icon: ArrowLeftRight, color: '#0891B2' };
       case 'qr':
         return { text: 'Quét mã QR thanh toán', icon: QrCode, color: '#9333EA' };
       default:
@@ -200,7 +190,6 @@ export const ActionModal: React.FC<ActionModalProps> = ({
   ];
 
   const users = ['Mẹ Lan', 'Bố Minh', 'Ví gia đình chung'];
-  const wallets = ['Ví Mẹ Lan', 'Ví Bố Minh', 'Quỹ gia đình chung'];
 
   return (
     <Modal
@@ -228,6 +217,13 @@ export const ActionModal: React.FC<ActionModalProps> = ({
 
               {/* Content Body */}
               <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
+                {errorMsg && (
+                  <View style={styles.errorBoxAlert}>
+                    <ShieldAlert size={16} color="#DC2626" />
+                    <Text style={styles.errorTextAlert}>{errorMsg}</Text>
+                  </View>
+                )}
+
                 {type === 'qr' ? (
                   <View style={styles.qrContainer}>
                     <View style={styles.qrBox}>
@@ -263,7 +259,7 @@ export const ActionModal: React.FC<ActionModalProps> = ({
                   <View style={styles.form}>
                     {/* Amount input */}
                     <View style={styles.fieldGroup}>
-                      <Text style={styles.label}>Số tiền (VNĐ)</Text>
+                      <Text style={styles.label}>Số tiền (VNĐ) (*)</Text>
                       <TextInput
                         keyboardType="numeric"
                         placeholder="0"
@@ -277,7 +273,7 @@ export const ActionModal: React.FC<ActionModalProps> = ({
                       />
                     </View>
 
-                    {/* Expense / Quick Add title */}
+                    {/* Expense title */}
                     {(type === 'expense' || type === 'quick_add') && (
                       <View style={styles.fieldGroup}>
                         <Text style={styles.label}>Tên khoản chi / Nội dung</Text>
@@ -291,6 +287,63 @@ export const ActionModal: React.FC<ActionModalProps> = ({
                       </View>
                     )}
 
+                    {/* Deposit source wallet */}
+                    {type === 'deposit' && (
+                      <View style={styles.fieldGroup}>
+                        <Text style={styles.label}>Nguồn tiền nộp vào Quỹ (*)</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+                          {activeWallets
+                            .filter((w) => w.type !== 'Quỹ chung')
+                            .map((w) => (
+                              <TouchableOpacity
+                                key={w.id}
+                                onPress={() => setDepositSourceId(w.id)}
+                                style={[styles.chip, depositSourceId === w.id && styles.chipActive]}
+                              >
+                                <Text style={[styles.chipText, depositSourceId === w.id && styles.chipTextActive]}>
+                                  {w.name} ({w.balance.toLocaleString('vi-VN')} đ)
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                      </View>
+                    )}
+
+                    {/* Transfer wallet selectors */}
+                    {type === 'transfer' && (
+                      <View style={styles.fieldGroup}>
+                        <Text style={styles.label}>Từ ví (Ví nguồn)</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+                          {activeWallets.map((w) => (
+                            <TouchableOpacity
+                              key={`from-${w.id}`}
+                              onPress={() => setFromWalletId(w.id)}
+                              style={[styles.chip, fromWalletId === w.id && styles.chipActive]}
+                            >
+                              <Text style={[styles.chipText, fromWalletId === w.id && styles.chipTextActive]}>
+                                {w.name} ({w.balance.toLocaleString('vi-VN')}đ)
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+
+                        <Text style={[styles.label, { marginTop: 10 }]}>Đến ví (Ví đích)</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+                          {activeWallets.map((w) => (
+                            <TouchableOpacity
+                              key={`to-${w.id}`}
+                              onPress={() => setToWalletId(w.id)}
+                              style={[styles.chip, toWalletId === w.id && styles.chipActive]}
+                            >
+                              <Text style={[styles.chipText, toWalletId === w.id && styles.chipTextActive]}>
+                                {w.name}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      </View>
+                    )}
+
                     {/* Category Selector */}
                     {(type === 'expense' || type === 'quick_add') && (
                       <View style={styles.fieldGroup}>
@@ -300,104 +353,14 @@ export const ActionModal: React.FC<ActionModalProps> = ({
                             <TouchableOpacity
                               key={cat}
                               onPress={() => setCategory(cat)}
-                              style={[
-                                styles.chip,
-                                category === cat && styles.chipActive,
-                              ]}
+                              style={[styles.chip, category === cat && styles.chipActive]}
                             >
-                              <Text
-                                style={[
-                                  styles.chipText,
-                                  category === cat && styles.chipTextActive,
-                                ]}
-                              >
+                              <Text style={[styles.chipText, category === cat && styles.chipTextActive]}>
                                 {cat}
                               </Text>
                             </TouchableOpacity>
                           ))}
                         </ScrollView>
-                      </View>
-                    )}
-
-                    {/* Transfer fields */}
-                    {type === 'transfer' && (
-                      <View style={styles.fieldGroup}>
-                        <Text style={styles.label}>Từ ví sang Đến ví</Text>
-                        <View style={styles.rowTwo}>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.subLabel}>Từ ví</Text>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-                              {wallets.map((w) => (
-                                <TouchableOpacity
-                                  key={w}
-                                  onPress={() => setFromWallet(w)}
-                                  style={[styles.chip, fromWallet === w && styles.chipActive]}
-                                >
-                                  <Text style={[styles.chipText, fromWallet === w && styles.chipTextActive]}>{w}</Text>
-                                </TouchableOpacity>
-                              ))}
-                            </ScrollView>
-                          </View>
-                        </View>
-                      </View>
-                    )}
-
-                    {/* Date & Time picker */}
-                    {(type === 'expense' || type === 'quick_add' || type === 'deposit' || type === 'transfer') && (
-                      <View style={styles.fieldGroup}>
-                        <Text style={styles.label}>Ngày & giờ</Text>
-                        <TouchableOpacity
-                          style={styles.dateTimeField}
-                          onPress={openDateTimePicker}
-                          activeOpacity={0.8}
-                        >
-                          <Text style={styles.dateTimeText}>{dateTimeValue}</Text>
-                        </TouchableOpacity>
-
-                        {!isWeb && showDatePicker && (
-                          <View style={styles.pickerWrapper}>
-                            <DateTimePicker
-                              value={selectedDate}
-                              mode="date"
-                              display="spinner"
-                              onChange={(_event: any, date?: Date) => {
-                                if (_event.type === 'dismissed') {
-                                  setShowDatePicker(false);
-                                  return;
-                                }
-
-                                if (date) {
-                                  setSelectedDate(date);
-                                  setShowDatePicker(false);
-                                  setShowTimePicker(true);
-                                }
-                              }}
-                            />
-                          </View>
-                        )}
-
-                        {!isWeb && showTimePicker && (
-                          <View style={styles.pickerWrapper}>
-                            <DateTimePicker
-                              value={selectedTime}
-                              mode="time"
-                              display="spinner"
-                              onChange={(_event: any, time?: Date) => {
-                                if (_event.type === 'dismissed') {
-                                  setShowTimePicker(false);
-                                  return;
-                                }
-
-                                if (time) {
-                                  setSelectedTime(time);
-                                }
-                              }}
-                            />
-                            <TouchableOpacity style={styles.doneButton} onPress={handleConfirmDateTime}>
-                              <Text style={styles.doneButtonText}>Xong</Text>
-                            </TouchableOpacity>
-                          </View>
-                        )}
                       </View>
                     )}
 
@@ -418,11 +381,11 @@ export const ActionModal: React.FC<ActionModalProps> = ({
                     </View>
 
                     {/* Note */}
-                    {type === 'deposit' && (
+                    {(type === 'deposit' || type === 'transfer') && (
                       <View style={styles.fieldGroup}>
                         <Text style={styles.label}>Ghi chú</Text>
                         <TextInput
-                          placeholder="VD: Đóng quỹ tháng 10..."
+                          placeholder={type === 'deposit' ? 'VD: Đóng góp quỹ gia đình...' : 'VD: Rút tiền mặt, chuyển tiết kiệm...'}
                           placeholderTextColor="#94A3B8"
                           value={note}
                           onChangeText={setNote}
@@ -437,7 +400,13 @@ export const ActionModal: React.FC<ActionModalProps> = ({
                       style={styles.submitButton}
                       activeOpacity={0.8}
                     >
-                      <Text style={styles.submitText}>Xác nhận lưu</Text>
+                      <Text style={styles.submitText}>
+                        {type === 'transfer'
+                          ? 'Xác nhận chuyển'
+                          : type === 'deposit'
+                          ? 'Nạp quỹ ngay'
+                          : 'Xác nhận lưu'}
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -449,6 +418,7 @@ export const ActionModal: React.FC<ActionModalProps> = ({
     </Modal>
   );
 };
+
 
 const styles = StyleSheet.create({
   overlay: {
@@ -673,5 +643,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     color: '#FFFFFF',
+  },
+  errorBoxAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  errorTextAlert: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#DC2626',
+    flex: 1,
   },
 });

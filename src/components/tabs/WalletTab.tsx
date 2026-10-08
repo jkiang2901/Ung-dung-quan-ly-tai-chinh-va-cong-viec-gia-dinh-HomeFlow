@@ -7,26 +7,46 @@ import {
   TrendingUp,
   Home,
   Plus,
-  ShieldCheck,
   PiggyBank,
   Eye,
   EyeOff,
-  ChevronRight,
+  Landmark,
+  Banknote,
+  Smartphone,
+  CreditCard,
+  Edit2,
+  Trash2,
 } from 'lucide-react-native';
-import type { FamilyMember } from '../../types';
+import type { FamilyMember, Wallet, Transaction, RoleType } from '../../types';
 
 interface WalletTabProps {
-  fundBalance?: number;
-  members?: FamilyMember[];
+  fundBalance: number;
+  wallets: Wallet[];
+  transactions: Transaction[];
+  members: FamilyMember[];
+  userRole: RoleType;
   onOpenDeposit: () => void;
   onOpenTransfer: () => void;
+  onOpenAddWallet: () => void;
+  onOpenEditWallet: (wallet: Wallet) => void;
+  onOpenDeleteWallet: (wallet: Wallet) => void;
+  onOpenStatement: () => void;
+  onOpenBudgetLimits: () => void;
 }
 
 export const WalletTab: React.FC<WalletTabProps> = ({
-  fundBalance = 48250000,
-  members = [],
+  fundBalance,
+  wallets,
+  transactions,
+  members,
+  userRole,
   onOpenDeposit,
   onOpenTransfer,
+  onOpenAddWallet,
+  onOpenEditWallet,
+  onOpenDeleteWallet,
+  onOpenStatement,
+  onOpenBudgetLimits,
 }) => {
   const [showBalance, setShowBalance] = useState<boolean>(true);
 
@@ -34,66 +54,62 @@ export const WalletTab: React.FC<WalletTabProps> = ({
     return amount.toLocaleString('vi-VN');
   };
 
-  const contributions = [
-    {
-      id: 'c1',
-      name: 'Bố Minh',
-      role: 'Quản trị viên',
-      amount: 25000000,
-      percent: '52%',
-      color: '#056839',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
-    },
-    {
-      id: 'c2',
-      name: 'Mẹ Lan',
-      role: 'Quản lý thu chi',
-      amount: 20000000,
-      percent: '41%',
-      color: '#10B981',
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=250',
-    },
-    {
-      id: 'c3',
-      name: 'Quỹ tiết kiệm tích lũy',
-      role: 'Quỹ dự phòng chung',
-      amount: 3250000,
-      percent: '7%',
-      color: '#F59E0B',
-      avatar: null,
-    },
-  ];
+  // 1. Tính toán thực tế Nguồn đóng góp vào Quỹ chung từ các giao dịch type = 'contribution'
+  const contributorMap = new Map<string, number>();
 
-  const subWallets = [
-    {
-      id: 'w1',
-      title: 'Quỹ chi tiêu gia đình hàng ngày',
-      balance: 18500000,
-      monthlyLimit: 25000000,
-      icon: Home,
-      color: '#056839',
-    },
-    {
-      id: 'w2',
-      title: 'Quỹ giáo dục & Nuôi dạy con',
-      balance: 15200000,
-      monthlyLimit: 20000000,
-      icon: ShieldCheck,
-      color: '#2563EB',
-    },
-    {
-      id: 'w3',
-      title: 'Quỹ tiết kiệm khẩn cấp',
-      balance: 14550000,
-      monthlyLimit: null,
-      icon: PiggyBank,
-      color: '#EA580C',
-    },
-  ];
+  transactions.forEach((tx) => {
+    if (tx.type === 'contribution') {
+      const contributorName = tx.user || 'Thành viên';
+      const current = contributorMap.get(contributorName) || 0;
+      contributorMap.set(contributorName, current + Math.abs(tx.amount));
+    }
+  });
+
+  let totalContribAmount = Array.from(contributorMap.values()).reduce((a, b) => a + b, 0);
+  if (totalContribAmount === 0) totalContribAmount = fundBalance > 0 ? fundBalance : 1;
+
+  const contributorColors = ['#056839', '#10B981', '#F59E0B', '#2563EB', '#8B5CF6'];
+
+  const dynamicContributions = Array.from(contributorMap.entries()).map(([name, amount], index) => {
+    const percentNum = Math.round((amount / totalContribAmount) * 100);
+    const matchedMember = members.find(
+      (m) => m.name.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(m.name.toLowerCase())
+    );
+    return {
+      id: `contrib-${index}`,
+      name,
+      role: matchedMember?.roleLabel || 'Nguồn đóng góp gia đình',
+      amount,
+      percent: `${percentNum}%`,
+      percentValue: percentNum,
+      color: contributorColors[index % contributorColors.length],
+      avatar: matchedMember?.avatar || null,
+    };
+  });
+
+  const activeWallets = wallets.filter((w) => w.active);
+  const totalWalletBalance = activeWallets.reduce((sum, w) => sum + w.balance, 0);
+
+  const getWalletIcon = (type: string) => {
+    switch (type) {
+      case 'Ngân hàng':
+        return { icon: Landmark, color: '#2563EB', bg: '#EFF6FF' };
+      case 'Tiền mặt':
+        return { icon: Banknote, color: '#056839', bg: '#ECFDF5' };
+      case 'Ví điện tử':
+        return { icon: Smartphone, color: '#EA580C', bg: '#FFF7ED' };
+      case 'Tiết kiệm':
+        return { icon: PiggyBank, color: '#D97706', bg: '#FEF3C7' };
+      case 'Quỹ chung':
+        return { icon: Home, color: '#056839', bg: '#D1FAE5' };
+      default:
+        return { icon: CreditCard, color: '#9333EA', bg: '#F3E8FF' };
+    }
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* 1. Header Hero Card: QUỸ GIA ĐÌNH CHUNG */}
+      {/* 1. Header Hero Card: QUỸ GIA ĐÌNH CHUNG (GIỮ NGUYÊN STYLE) */}
       <View style={styles.heroCard}>
         <View style={styles.watermark}>
           <Home size={130} color="#FFFFFF" opacity={0.09} strokeWidth={1.5} />
@@ -132,7 +148,7 @@ export const WalletTab: React.FC<WalletTabProps> = ({
             <View style={styles.growthRow}>
               <TrendingUp size={14} color="#6EE7B7" />
               <Text style={styles.growthText}>+12.4%</Text>
-              <Text style={styles.growthSub}>so với tháng 09</Text>
+              <Text style={styles.growthSub}>so với tháng trước</Text>
             </View>
 
             <TouchableOpacity
@@ -161,7 +177,7 @@ export const WalletTab: React.FC<WalletTabProps> = ({
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={onOpenDeposit}
+          onPress={onOpenBudgetLimits}
           activeOpacity={0.8}
           style={styles.actionCard}
         >
@@ -172,7 +188,7 @@ export const WalletTab: React.FC<WalletTabProps> = ({
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={onOpenDeposit}
+          onPress={onOpenStatement}
           activeOpacity={0.8}
           style={styles.actionCard}
         >
@@ -183,7 +199,7 @@ export const WalletTab: React.FC<WalletTabProps> = ({
         </TouchableOpacity>
       </View>
 
-      {/* 3. Cơ cấu đóng góp Quỹ chung */}
+      {/* 3. Cơ cấu đóng góp Quỹ chung (TÍNH TỶ LỆ THỰC TẾ) */}
       <View style={styles.sectionCard}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Nguồn đóng góp vào Quỹ chung</Text>
@@ -192,14 +208,20 @@ export const WalletTab: React.FC<WalletTabProps> = ({
 
         {/* Progress Bar of contributions */}
         <View style={styles.stackedBar}>
-          <View style={[styles.barSegment, { flex: 52, backgroundColor: '#056839' }]} />
-          <View style={[styles.barSegment, { flex: 41, backgroundColor: '#10B981' }]} />
-          <View style={[styles.barSegment, { flex: 7, backgroundColor: '#F59E0B' }]} />
+          {dynamicContributions.map((c) => (
+            <View
+              key={c.id}
+              style={[
+                styles.barSegment,
+                { flex: Math.max(1, c.percentValue), backgroundColor: c.color },
+              ]}
+            />
+          ))}
         </View>
 
         {/* List of contributors */}
         <View style={styles.contributorList}>
-          {contributions.map((c) => (
+          {dynamicContributions.map((c) => (
             <View key={c.id} style={styles.contributorItem}>
               <View style={styles.contributorLeft}>
                 {c.avatar ? (
@@ -226,39 +248,68 @@ export const WalletTab: React.FC<WalletTabProps> = ({
         </View>
       </View>
 
-      {/* 4. Các Quỹ & Ví mục đích thành viên */}
+      {/* 4. Quản lý hệ thống các Ví tiền */}
       <View style={styles.sectionCard}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Các ví mục đích trong nhà</Text>
-          <TouchableOpacity onPress={onOpenDeposit}>
-            <Text style={styles.seeAllText}>+ Tạo ví mới</Text>
-          </TouchableOpacity>
+          <View>
+            <Text style={styles.sectionTitle}>Danh sách ví tiền ({activeWallets.length})</Text>
+            <Text style={styles.sectionSubtitle}>
+              Tổng tiền khả dụng: {formatMoney(totalWalletBalance)} đ
+            </Text>
+          </View>
+          {userRole !== 'VIEWER' && (
+            <TouchableOpacity onPress={onOpenAddWallet} style={styles.addWalletBtn}>
+              <Plus size={14} color="#FFFFFF" strokeWidth={3} />
+              <Text style={styles.addWalletBtnText}>Thêm ví</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.subWalletList}>
-          {subWallets.map((w) => {
-            const Icon = w.icon;
+          {activeWallets.map((w) => {
+            const iconConfig = getWalletIcon(w.type);
+            const IconComp = iconConfig.icon;
+
             return (
-              <TouchableOpacity
-                key={w.id}
-                style={styles.subWalletItem}
-                activeOpacity={0.7}
-                onPress={onOpenTransfer}
-              >
-                <View style={[styles.subWalletIconBox, { backgroundColor: `${w.color}15` }]}>
-                  <Icon size={20} color={w.color} />
+              <View key={w.id} style={styles.walletItemCard}>
+                <View style={[styles.subWalletIconBox, { backgroundColor: iconConfig.bg }]}>
+                  <IconComp size={20} color={iconConfig.color} strokeWidth={2.2} />
                 </View>
+
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.subWalletTitle}>{w.title}</Text>
+                  <View style={styles.walletTitleRow}>
+                    <Text style={styles.subWalletTitle}>{w.name}</Text>
+                    <View style={styles.typeTag}>
+                      <Text style={styles.typeTagText}>{w.type}</Text>
+                    </View>
+                  </View>
                   <Text style={styles.subWalletBalance}>{formatMoney(w.balance)} đ</Text>
-                  {w.monthlyLimit && (
-                    <Text style={styles.subWalletLimit}>
-                      Hạn mức: {formatMoney(w.monthlyLimit)} đ/tháng
-                    </Text>
-                  )}
+                  <Text style={styles.subWalletOwner}>Chủ sở hữu: {w.ownerName}</Text>
                 </View>
-                <ChevronRight size={18} color="#94A3B8" />
-              </TouchableOpacity>
+
+                {/* Actions: Edit & Delete */}
+                {userRole !== 'VIEWER' && (
+                  <View style={styles.actionButtonsCol}>
+                    <TouchableOpacity
+                      onPress={() => onOpenEditWallet(w)}
+                      style={styles.iconBtn}
+                      activeOpacity={0.7}
+                    >
+                      <Edit2 size={16} color="#056839" />
+                    </TouchableOpacity>
+
+                    {w.type !== 'Quỹ chung' && (
+                      <TouchableOpacity
+                        onPress={() => onOpenDeleteWallet(w)}
+                        style={styles.iconBtn}
+                        activeOpacity={0.7}
+                      >
+                        <Trash2 size={16} color="#DC2626" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+              </View>
             );
           })}
         </View>
@@ -449,14 +500,24 @@ const styles = StyleSheet.create({
     color: '#0F172A',
   },
   sectionSubtitle: {
-    fontSize: 12,
-    color: '#94A3B8',
+    fontSize: 11,
+    color: '#64748B',
     fontWeight: '600',
+    marginTop: 2,
   },
-  seeAllText: {
-    fontSize: 12,
-    color: '#056839',
-    fontWeight: '700',
+  addWalletBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#056839',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  addWalletBtnText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
   },
   stackedBar: {
     height: 10,
@@ -525,35 +586,65 @@ const styles = StyleSheet.create({
   subWalletList: {
     gap: 10,
   },
-  subWalletItem: {
+  walletItemCard: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
     backgroundColor: '#F8FAFC',
     borderRadius: 16,
     gap: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   subWalletIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 42,
+    height: 42,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  subWalletTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1E293B',
+  walletTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  subWalletBalance: {
+  subWalletTitle: {
     fontSize: 14,
     fontWeight: '800',
+    color: '#1E293B',
+  },
+  typeTag: {
+    backgroundColor: '#E2E8F0',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  typeTagText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  subWalletBalance: {
+    fontSize: 15,
+    fontWeight: '900',
     color: '#056839',
     marginTop: 2,
   },
-  subWalletLimit: {
+  subWalletOwner: {
     fontSize: 11,
     color: '#64748B',
     marginTop: 1,
+  },
+  actionButtonsCol: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  iconBtn: {
+    padding: 8,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
 });
