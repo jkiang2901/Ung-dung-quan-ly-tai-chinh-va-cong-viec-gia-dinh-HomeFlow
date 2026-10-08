@@ -6,7 +6,7 @@ export const INITIAL_MEMBERS: FamilyMember[] = [
     name: 'Bố Minh',
     email: 'owner@test.com',
     role: 'OWNER',
-    roleLabel: 'Quản trị viên gia đình',
+    roleLabel: 'Chủ Hộ Gia Đình',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
   },
   {
@@ -14,7 +14,7 @@ export const INITIAL_MEMBERS: FamilyMember[] = [
     name: 'Mẹ Lan',
     email: 'member@test.com',
     role: 'MEMBER',
-    roleLabel: 'Quản lý thu chi',
+    roleLabel: 'Thành Viên Gia Đình',
     avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=250',
   },
   {
@@ -22,7 +22,7 @@ export const INITIAL_MEMBERS: FamilyMember[] = [
     name: 'Bé Bi',
     email: 'viewer@test.com',
     role: 'VIEWER',
-    roleLabel: 'Thành viên (Chỉ xem)',
+    roleLabel: 'Trẻ Em',
     avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=250',
   },
 ];

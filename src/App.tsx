@@ -99,7 +99,7 @@ export function App() {
 
   const handleLoginSuccess = (user: AuthUser) => {
     setCurrentUser(user);
-    showToastMessage(`Đã đăng nhập thành công với vai trò ${user.role} (${user.name})`);
+    showToastMessage(`Đã đăng nhập thành công: ${user.name} (${user.roleLabel || (user.role === 'OWNER' ? 'Chủ Hộ Gia Đình' : user.role === 'MEMBER' ? 'Thành Viên Gia Đình' : 'Trẻ Em')})`);
   };
 
   const handleLogout = () => {
@@ -115,7 +115,7 @@ export function App() {
     ownerName: string;
   }) => {
     if (userRole === 'VIEWER') {
-      showToastMessage('⚠️ Tài khoản VIEWER không có quyền thêm ví.');
+      showToastMessage('⚠️ Tài khoản Trẻ Em không có quyền thêm ví.');
       return;
     }
 
@@ -140,7 +140,7 @@ export function App() {
     data: { name: string; type: WalletType; ownerName: string }
   ) => {
     if (userRole === 'VIEWER') {
-      showToastMessage('⚠️ Tài khoản VIEWER không có quyền sửa ví.');
+      showToastMessage('⚠️ Tài khoản Trẻ Em không có quyền sửa ví.');
       return;
     }
 
@@ -153,7 +153,7 @@ export function App() {
   // 3. VÔ HIỆU HÓA VÍ
   const handleDisableWallet = (id: string) => {
     if (userRole === 'VIEWER') {
-      showToastMessage('⚠️ Tài khoản VIEWER không có quyền vô hiệu hóa ví.');
+      showToastMessage('⚠️ Tài khoản Trẻ Em không có quyền vô hiệu hóa ví.');
       return;
     }
 
@@ -167,7 +167,7 @@ export function App() {
   // 4. XÓA VÍ (Ví chưa có giao dịch)
   const handleDeleteWallet = (id: string) => {
     if (userRole === 'VIEWER') {
-      showToastMessage('⚠️ Tài khoản VIEWER không có quyền xóa ví.');
+      showToastMessage('⚠️ Tài khoản Trẻ Em không có quyền xóa ví.');
       return;
     }
 
@@ -185,7 +185,7 @@ export function App() {
     dateTime?: string;
   }) => {
     if (userRole === 'VIEWER') {
-      showToastMessage('⚠️ Tài khoản VIEWER không có quyền chuyển tiền.');
+      showToastMessage('⚠️ Tài khoản Trẻ Em không có quyền chuyển tiền.');
       return;
     }
 
@@ -242,7 +242,7 @@ export function App() {
     dateTime?: string;
   }) => {
     if (userRole === 'VIEWER') {
-      showToastMessage('⚠️ Tài khoản VIEWER không có quyền nạp quỹ.');
+      showToastMessage('⚠️ Tài khoản Trẻ Em không có quyền nạp quỹ.');
       return;
     }
 
@@ -298,7 +298,7 @@ export function App() {
     dateTime?: string;
   }) => {
     if (userRole === 'VIEWER') {
-      showToastMessage('⚠️ Tài khoản VIEWER không có quyền tạo chi tiêu.');
+      showToastMessage('⚠️ Tài khoản Trẻ Em không có quyền tạo chi tiêu.');
       return;
     }
 
@@ -335,7 +335,7 @@ export function App() {
   // 8. CẬP NHẬT HẠN MỨC
   const handleUpdateLimit = (category: string, newLimit: number) => {
     if (userRole === 'VIEWER') {
-      showToastMessage('⚠️ Tài khoản VIEWER không có quyền cài đặt hạn mức.');
+      showToastMessage('⚠️ Tài khoản Trẻ Em không có quyền cài đặt hạn mức.');
       return;
     }
 
@@ -348,7 +348,7 @@ export function App() {
   // 9. MỜI NGƯỜI THÂN
   const handleSendInvitation = (email: string, role: RoleType) => {
     if (userRole !== 'OWNER') {
-      showToastMessage('⚠️ Chỉ OWNER mới có quyền gửi lời mời.');
+      showToastMessage('⚠️ Chỉ Chủ Hộ Gia Đình mới có quyền gửi lời mời.');
       return;
     }
 

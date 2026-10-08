@@ -45,7 +45,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
     setSuccessMsg(null);
 
     if (userRole !== 'OWNER') {
-      setError('Chỉ Quản trị viên (OWNER) mới có quyền gửi lời mời gia nhập gia đình.');
+      setError('Chỉ Chủ hộ gia đình mới có quyền gửi lời mời gia nhập gia đình.');
       return;
     }
 
@@ -126,7 +126,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                   <View style={styles.noticeBox}>
                     <ShieldAlert size={16} color="#D97706" />
                     <Text style={styles.noticeText}>
-                      Tài khoản của bạn ({userRole}) không có quyền gửi lời mời. Chỉ Bố Minh (OWNER) mới có quyền mời thành viên mới.
+                      Tài khoản của bạn ({userRole === 'MEMBER' ? 'Thành Viên Gia Đình' : 'Trẻ Em'}) không có quyền gửi lời mời. Chỉ Chủ Hộ Gia Đình mới có quyền mời thành viên mới.
                     </Text>
                   </View>
                 )}
@@ -166,7 +166,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                               selectedRole === 'MEMBER' && styles.roleChipTitleActive,
                             ]}
                           >
-                            MEMBER (Thành viên)
+                            Thành Viên Gia Đình
                           </Text>
                           <Text
                             style={[
@@ -191,7 +191,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                               selectedRole === 'VIEWER' && styles.roleChipTitleActive,
                             ]}
                           >
-                            VIEWER (Người xem)
+                            Trẻ Em
                           </Text>
                           <Text
                             style={[
@@ -199,7 +199,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                               selectedRole === 'VIEWER' && styles.roleChipSubActive,
                             ]}
                           >
-                            Chỉ xem thông tin ví
+                            Chỉ xem thông tin ví & sao kê
                           </Text>
                         </TouchableOpacity>
                       </View>
@@ -227,7 +227,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                         <View style={{ flex: 1 }}>
                           <Text style={styles.invEmail}>{inv.email}</Text>
                           <Text style={styles.invMeta}>
-                            Role: <Text style={{ fontWeight: '700' }}>{inv.role}</Text> • Ngày gửi: {inv.createdAt}
+                            Vai trò: <Text style={{ fontWeight: '700' }}>{inv.role === 'OWNER' ? 'Chủ Hộ Gia Đình' : inv.role === 'MEMBER' ? 'Thành Viên Gia Đình' : 'Trẻ Em'}</Text> • Ngày gửi: {inv.createdAt}
                           </Text>
                         </View>
 

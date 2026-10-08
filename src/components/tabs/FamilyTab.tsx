@@ -60,7 +60,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                   {m.email && <Text style={styles.memberEmail}>{m.email}</Text>}
                   <View style={styles.roleRow}>
                     <ShieldCheck size={14} color="#056839" />
-                    <Text style={styles.roleText}>{m.roleLabel || m.role}</Text>
+                    <Text style={styles.roleText}>{m.roleLabel || (m.role === 'OWNER' ? 'Chủ Hộ Gia Đình' : m.role === 'MEMBER' ? 'Thành Viên Gia Đình' : 'Trẻ Em')}</Text>
                   </View>
                 </View>
               </View>
@@ -92,7 +92,11 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                       },
                     ]}
                   >
-                    {m.role}
+                    {m.role === 'OWNER'
+                      ? 'Chủ Hộ Gia Đình'
+                      : m.role === 'MEMBER'
+                      ? 'Thành Viên Gia Đình'
+                      : 'Trẻ Em'}
                   </Text>
                 </View>
               </View>
@@ -105,16 +109,16 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
       <View style={styles.infoBox}>
         <View style={styles.infoTitleRow}>
           <ShieldCheck size={16} color="#056839" />
-          <Text style={styles.infoTitle}>Phân quyền theo vai trò (Role Permission)</Text>
+          <Text style={styles.infoTitle}>Phân quyền theo vai trò trong gia đình</Text>
         </View>
         <Text style={styles.infoBullet}>
-          • <Text style={{ fontWeight: '800', color: '#056839' }}>OWNER (Bố Minh)</Text>: Toàn quyền quản lý ví, thêm/sửa/xóa ví, nạp quỹ, chuyển tiền, cài đặt hạn mức, mời người thân và xem sao kê.
+          • <Text style={{ fontWeight: '800', color: '#056839' }}>Chủ Hộ Gia Đình (Bố Minh)</Text>: Toàn quyền quản lý ví, thêm/sửa/xóa ví, nạp quỹ, chuyển tiền, cài đặt hạn mức, mời người thân và xem sao kê.
         </Text>
         <Text style={styles.infoBullet}>
-          • <Text style={{ fontWeight: '800', color: '#2563EB' }}>MEMBER (Mẹ Lan)</Text>: Được xem ví, tạo thu chi, thực hiện chuyển tiền nếu được cấp quyền. Không quản lý ví hay phân quyền.
+          • <Text style={{ fontWeight: '800', color: '#2563EB' }}>Thành Viên Gia Đình (Mẹ Lan)</Text>: Được xem ví, tạo thu chi, thực hiện chuyển tiền nếu được cấp quyền. Không quản lý ví hay phân quyền.
         </Text>
         <Text style={styles.infoBullet}>
-          • <Text style={{ fontWeight: '800', color: '#D97706' }}>VIEWER (Bé Bi)</Text>: Chỉ xem thông tin ví và sao kê. Không thể tạo hay chỉnh sửa bất kỳ ví hay giao dịch nào.
+          • <Text style={{ fontWeight: '800', color: '#D97706' }}>Trẻ Em (Bé Bi)</Text>: Chỉ xem thông tin ví và sao kê. Không thể tạo hay chỉnh sửa bất kỳ ví hay giao dịch nào.
         </Text>
       </View>
     </ScrollView>

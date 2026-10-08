@@ -46,7 +46,7 @@ export const BudgetLimitModal: React.FC<BudgetLimitModalProps> = ({
 
   const handleStartEdit = (b: CategoryBudget) => {
     if (userRole === 'VIEWER') {
-      setError('Tài khoản chỉ xem (VIEWER) không có quyền thay đổi hạn mức.');
+      setError('Tài khoản Trẻ Em không có quyền thay đổi hạn mức.');
       return;
     }
     setError(null);
@@ -57,7 +57,7 @@ export const BudgetLimitModal: React.FC<BudgetLimitModalProps> = ({
   const handleSaveEdit = (category: string) => {
     setError(null);
     if (userRole === 'VIEWER') {
-      setError('Tài khoản chỉ xem (VIEWER) không có quyền thay đổi hạn mức.');
+      setError('Tài khoản Trẻ Em không có quyền thay đổi hạn mức.');
       return;
     }
 

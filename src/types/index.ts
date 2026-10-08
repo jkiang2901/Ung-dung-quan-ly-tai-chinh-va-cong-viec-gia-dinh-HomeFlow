@@ -1,5 +1,16 @@
 export type RoleType = 'OWNER' | 'MEMBER' | 'VIEWER';
 
+export const ROLE_LABELS: Record<RoleType, string> = {
+  OWNER: 'Chủ Hộ Gia Đình',
+  MEMBER: 'Thành Viên Gia Đình',
+  VIEWER: 'Trẻ Em',
+};
+
+export const getRoleLabel = (role: RoleType): string => {
+  return ROLE_LABELS[role] || role;
+};
+
+
 export type WalletType = 'Tiền mặt' | 'Ngân hàng' | 'Ví điện tử' | 'Tiết kiệm' | 'Khác' | 'Quỹ chung';
 
 export interface Wallet {

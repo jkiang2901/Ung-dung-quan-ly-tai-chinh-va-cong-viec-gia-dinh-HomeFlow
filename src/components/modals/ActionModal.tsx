@@ -87,7 +87,7 @@ export const ActionModal: React.FC<ActionModalProps> = ({
     setErrorMsg(null);
 
     if (userRole === 'VIEWER') {
-      setErrorMsg('Tài khoản chỉ xem (VIEWER) không có quyền thực hiện giao dịch.');
+      setErrorMsg('Tài khoản Trẻ Em không có quyền thực hiện giao dịch.');
       return;
     }
 

@@ -69,7 +69,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
   const handleSubmit = () => {
     setError(null);
     if (userRole === 'VIEWER') {
-      setError('Tài khoản của bạn chỉ có quyền XEM (VIEWER), không thể chỉnh sửa ví.');
+      setError('Tài khoản Trẻ Em chỉ có quyền xem, không thể chỉnh sửa ví.');
       return;
     }
 
@@ -114,7 +114,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
 
   const handleDeleteOrDisable = () => {
     if (userRole === 'VIEWER') {
-      setError('Tài khoản chỉ xem (VIEWER) không có quyền xóa hoặc vô hiệu hóa ví.');
+      setError('Tài khoản Trẻ Em không có quyền xóa hoặc vô hiệu hóa ví.');
       return;
     }
     if (!wallet) return;
