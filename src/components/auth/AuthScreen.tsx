@@ -24,7 +24,8 @@ import {
   ShieldCheck,
   KeyRound,
 } from 'lucide-react-native';
-import type { AuthUser } from '../../types';
+import type { AuthUser, RoleType } from '../../types';
+import { api } from '../../services/api';
 
 export type AuthMode = 'login' | 'register' | 'forgot' | 'recover';
 
@@ -104,8 +105,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     setMode(newMode);
   };
 
-  // 1. Xử lý Đăng nhập
-  const handleLogin = () => {
+  const [loading, setLoading] = useState(false);
+
+  // 1. Xử lý Đăng nhập qua API Backend
+  const handleLogin = async () => {
     clearMessages();
     if (!loginEmail.trim()) {
       setErrorMessage('Vui lòng nhập Email hoặc Số điện thoại');
@@ -116,26 +119,47 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       return;
     }
 
-    // Kiểm tra tài khoản mẫu hoặc tài khoản tuỳ ý
-    const matched = DEMO_ACCOUNTS.find(
-      (a) => a.email.toLowerCase() === loginEmail.trim().toLowerCase()
-    );
+    setLoading(true);
+    try {
+      const res = await api.auth.login({
+        email: loginEmail.trim(),
+        password: loginPassword,
+      });
 
-    const userToLogin: AuthUser = matched || {
-      id: 'user_' + Date.now(),
-      name: loginEmail.includes('@') ? loginEmail.split('@')[0] : 'Thành viên',
-      email: loginEmail.trim(),
-      role: 'MEMBER',
-      roleLabel: 'Thành Viên Gia Đình',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=250',
-      personalBalance: 15000000,
-    };
+      api.setToken(res.token);
 
-    onLoginSuccess(userToLogin);
+      const matchedDemo = DEMO_ACCOUNTS.find(
+        (a) => a.email.toLowerCase() === res.user.email.toLowerCase()
+      );
+
+      const userToLogin: AuthUser = {
+        id: res.user.id,
+        name: res.user.display_name,
+        email: res.user.email,
+        role: matchedDemo?.role || 'OWNER',
+        roleLabel: matchedDemo?.roleLabel || 'Chủ Hộ Gia Đình',
+        avatar: res.user.avatar_url || matchedDemo?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+        personalBalance: matchedDemo?.personalBalance || 15000000,
+      };
+
+      onLoginSuccess(userToLogin);
+    } catch (err: any) {
+      // Fallback cho tài khoản demo offline nếu server chưa khởi động
+      const matched = DEMO_ACCOUNTS.find(
+        (a) => a.email.toLowerCase() === loginEmail.trim().toLowerCase()
+      );
+      if (matched && (err.message?.includes('Failed to fetch') || err.message?.includes('Network request failed'))) {
+        onLoginSuccess(matched);
+      } else {
+        setErrorMessage(err.message || 'Email hoặc mật khẩu không chính xác');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // 2. Xử lý Đăng ký
-  const handleRegister = () => {
+  // 2. Xử lý Đăng ký tài khoản mới lên MongoDB Atlas
+  const handleRegister = async () => {
     clearMessages();
     if (!regName.trim()) {
       setErrorMessage('Vui lòng nhập Họ và tên');
@@ -154,21 +178,38 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       return;
     }
 
-    const newUser: AuthUser = {
-      id: 'reg_' + Date.now(),
-      name: regName.trim(),
-      email: regEmail.trim(),
-      phone: regPhone.trim() || undefined,
-      role: regRole.includes('Chủ Hộ') || regRole.includes('Bố') ? 'OWNER' : regRole.includes('Trẻ') ? 'VIEWER' : 'MEMBER',
-      roleLabel: regRole,
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=250',
-      personalBalance: 10000000,
-    };
+    setLoading(true);
+    try {
+      const res = await api.auth.register({
+        email: regEmail.trim(),
+        password: regPassword,
+        display_name: regName.trim(),
+      });
 
-    setSuccessMessage('Đăng ký thành công! Đang đăng nhập...');
-    setTimeout(() => {
-      onLoginSuccess(newUser);
-    }, 800);
+      api.setToken(res.token);
+
+      const role: RoleType = regRole.includes('Chủ Hộ') || regRole.includes('Bố') ? 'OWNER' : regRole.includes('Trẻ') ? 'VIEWER' : 'MEMBER';
+
+      const newUser: AuthUser = {
+        id: res.user.id,
+        name: res.user.display_name,
+        email: res.user.email,
+        phone: regPhone.trim() || undefined,
+        role,
+        roleLabel: regRole,
+        avatar: res.user.avatar_url || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=250',
+        personalBalance: 0,
+      };
+
+      setSuccessMessage('Đăng ký tài khoản MongoDB thành công! Đang vào ứng dụng...');
+      setTimeout(() => {
+        onLoginSuccess(newUser);
+      }, 700);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Đăng ký không thành công');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 3. Xử lý Quên mật khẩu -> Gửi OTP
@@ -324,11 +365,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
               {/* Submit Button */}
               <TouchableOpacity
-                style={styles.primaryButton}
+                style={[styles.primaryButton, loading && { opacity: 0.7 }]}
                 onPress={handleLogin}
+                disabled={loading}
                 activeOpacity={0.85}
               >
-                <Text style={styles.primaryButtonText}>Đăng nhập</Text>
+                <Text style={styles.primaryButtonText}>{loading ? 'Đang đăng nhập...' : 'Đăng nhập'}</Text>
                 <ArrowRight size={18} color="#FFFFFF" />
               </TouchableOpacity>
 
@@ -476,11 +518,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               </View>
 
               <TouchableOpacity
-                style={styles.primaryButton}
+                style={[styles.primaryButton, loading && { opacity: 0.7 }]}
                 onPress={handleRegister}
+                disabled={loading}
                 activeOpacity={0.85}
               >
-                <Text style={styles.primaryButtonText}>Đăng ký tài khoản</Text>
+                <Text style={styles.primaryButtonText}>{loading ? 'Đang tạo tài khoản...' : 'Đăng ký tài khoản'}</Text>
                 <ArrowRight size={18} color="#FFFFFF" />
               </TouchableOpacity>
 
