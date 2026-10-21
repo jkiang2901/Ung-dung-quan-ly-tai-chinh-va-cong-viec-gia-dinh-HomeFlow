@@ -1,6 +1,19 @@
+import { Platform } from 'react-native';
 import type { Wallet, WalletType, Transaction } from '../types';
 
-export const API_BASE_URL = 'http://localhost:5000/api';
+export const getBaseApiUrl = (): string => {
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+  // Khi chạy Android Emulator, sử dụng 10.0.2.2 để kết nối vào localhost của máy host
+  if (Platform.OS === 'android') {
+    return 'http://10.0.2.2:5000/api';
+  }
+  // Môi trường Web và iOS Simulator
+  return 'http://localhost:5000/api';
+};
+
+export const API_BASE_URL = getBaseApiUrl();
 
 export const mapUiWalletTypeToBackend = (type: WalletType): 'cash' | 'bank' | 'e_wallet' | 'savings' | 'other' => {
   switch (type) {
@@ -58,13 +71,63 @@ export const mapBackendTransactionToUi = (t: any): Transaction => {
   };
 };
 
+export interface TransactionStatistics {
+  filter: {
+    account_id: string | null;
+    household_id: string | null;
+    start_date: string | null;
+    end_date: string | null;
+    group_by: 'day' | 'week' | 'month';
+  };
+  summary: {
+    total_income: number;
+    total_expense: number;
+    net_income: number;
+    transaction_count: number;
+  };
+  breakdown: Array<{
+    period: string;
+    income: number;
+    expense: number;
+    net: number;
+    count: number;
+  }>;
+  by_category: Array<{
+    category_id: string | null;
+    category_name: string;
+    category_icon: string;
+    category_color: string;
+    total: number;
+    count: number;
+    percentage: number;
+  }>;
+  by_income_category: Array<{
+    category_id: string | null;
+    category_name: string;
+    category_icon: string;
+    category_color: string;
+    total: number;
+    count: number;
+    percentage: number;
+  }>;
+}
+
 class ApiService {
   private token: string | null = null;
+  private baseUrl: string = API_BASE_URL;
 
   constructor() {
     if (typeof window !== 'undefined' && window.localStorage) {
       this.token = window.localStorage.getItem('homeflow_token');
     }
+  }
+
+  setBaseUrl(url: string) {
+    this.baseUrl = url.endsWith('/') ? url.slice(0, -1) : url;
+  }
+
+  getBaseUrl(): string {
+    return this.baseUrl;
   }
 
   setToken(token: string | null) {
@@ -92,7 +155,7 @@ class ApiService {
       headers['Authorization'] = `Bearer ${this.token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
       ...options,
       headers,
     });
@@ -122,8 +185,8 @@ class ApiService {
 
     getProfile: () => this.request<{ success: boolean; user: any }>('/auth/me'),
 
-    updateProfile: (payload: { display_name?: string; avatar_url?: string; timezone?: string }) =>
-      this.request<{ success: boolean; user: any }>('/auth/profile', {
+    updateProfile: (payload: { display_name?: string; avatar_url?: string | null; timezone?: string }) =>
+      this.request<{ success: boolean; message: string; user: any }>('/auth/profile', {
         method: 'PUT',
         body: JSON.stringify(payload),
       }),
@@ -192,6 +255,24 @@ class ApiService {
 
     getById: (id: string) => this.request<{ success: boolean; data: any }>(`/transactions/${id}`),
 
+    statistics: (params?: {
+      account_id?: string;
+      household_id?: string;
+      start_date?: string;
+      end_date?: string;
+      group_by?: 'day' | 'week' | 'month';
+    }) => {
+      const search = new URLSearchParams();
+      if (params?.account_id) search.append('account_id', params.account_id);
+      if (params?.household_id) search.append('household_id', params.household_id);
+      if (params?.start_date) search.append('start_date', params.start_date);
+      if (params?.end_date) search.append('end_date', params.end_date);
+      if (params?.group_by) search.append('group_by', params.group_by);
+      return this.request<{ success: boolean; data: TransactionStatistics }>(
+        `/transactions/statistics?${search.toString()}`
+      );
+    },
+
     create: (payload: {
       account_id: string;
       category_id?: string;
@@ -200,19 +281,19 @@ class ApiService {
       note?: string;
       transaction_date?: string;
     }) =>
-      this.request<{ success: boolean; message: string; data: any }>('/transactions', {
+      this.request<{ success: boolean; message: string; data: any; balance: number }>('/transactions', {
         method: 'POST',
         body: JSON.stringify(payload),
       }),
 
     update: (id: string, payload: any) =>
-      this.request<{ success: boolean; message: string; data: any }>(`/transactions/${id}`, {
+      this.request<{ success: boolean; message: string; data: any; balance?: number }>(`/transactions/${id}`, {
         method: 'PUT',
         body: JSON.stringify(payload),
       }),
 
     delete: (id: string) =>
-      this.request<{ success: boolean; message: string }>(`/transactions/${id}`, {
+      this.request<{ success: boolean; message: string; balance?: number }>(`/transactions/${id}`, {
         method: 'DELETE',
       }),
 
@@ -224,7 +305,17 @@ class ApiService {
       note?: string;
       transfer_date?: string;
     }) =>
-      this.request<{ success: boolean; message: string; data: any }>('/transactions/transfer', {
+      this.request<{
+        success: boolean;
+        message: string;
+        data: any;
+        balances: {
+          from_account_id: string;
+          from_balance: number;
+          to_account_id: string;
+          to_balance: number;
+        };
+      }>('/transactions/transfer', {
         method: 'POST',
         body: JSON.stringify(payload),
       }),

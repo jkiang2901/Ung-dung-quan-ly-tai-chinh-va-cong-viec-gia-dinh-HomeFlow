@@ -9,6 +9,7 @@
     "install:all": "npm install && cd server && npm install",
     "server": "node server/src/index.js",
     "server:dev": "node --watch server/src/index.js",
+    "server:test": "cd server && npm test",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
