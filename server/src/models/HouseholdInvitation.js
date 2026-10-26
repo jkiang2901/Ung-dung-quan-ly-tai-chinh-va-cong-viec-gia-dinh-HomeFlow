@@ -43,6 +43,12 @@ const householdInvitationSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    status: {
+      type: String,
+      enum: ['pending', 'accepted', 'expired', 'cancelled'],
+      default: 'pending',
+      index: true,
+    },
     created_at: {
       type: Date,
       default: Date.now,

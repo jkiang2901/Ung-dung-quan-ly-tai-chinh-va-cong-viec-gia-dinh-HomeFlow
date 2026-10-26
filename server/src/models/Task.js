@@ -14,9 +14,17 @@ const TaskSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    description: {
+      type: String,
+      default: '',
+    },
     time: {
       type: String,
       default: '',
+    },
+    due_date: {
+      type: Date,
+      default: null,
     },
     amount: {
       type: Number,
@@ -25,6 +33,12 @@ const TaskSchema = new mongoose.Schema(
     assigned_to: {
       type: String,
       default: 'Tôi',
+    },
+    // user_id của người được giao (dùng để filter và resolve profile)
+    assigned_to_user_id: {
+      type: String,
+      default: null,
+      index: true,
     },
     avatar_url: {
       type: String,
@@ -41,6 +55,10 @@ const TaskSchema = new mongoose.Schema(
     completed: {
       type: Boolean,
       default: false,
+    },
+    completed_at: {
+      type: Date,
+      default: null,
     },
     user_id: {
       type: String,
@@ -59,3 +77,4 @@ const TaskSchema = new mongoose.Schema(
 );
 
 export const Task = mongoose.model('Task', TaskSchema);
+
