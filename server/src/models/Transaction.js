@@ -52,6 +52,17 @@ const transactionSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    is_transfer: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    transfer_id: {
+      type: String,
+      default: null,
+      ref: 'TransactionTransfer',
+      index: true,
+    },
     created_at: {
       type: Date,
       default: Date.now,

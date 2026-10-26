@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -23,7 +23,7 @@ const DateTimePicker = (() => {
 import type { Wallet, RoleType } from '../../types';
 import { ShieldAlert } from 'lucide-react-native';
 
-export type ModalType = 'deposit' | 'expense' | 'transfer' | 'qr' | 'quick_add' | null;
+export type ModalType = 'deposit' | 'expense' | 'income' | 'transfer' | 'qr' | 'quick_add' | null;
 
 interface ActionModalProps {
   type: ModalType;
@@ -31,6 +31,7 @@ interface ActionModalProps {
   userRole?: RoleType;
   onClose: () => void;
   onSubmitExpense: (data: { title: string; amount: number; category: string; user: string; sourceWalletId?: string; dateTime?: string }) => void;
+  onSubmitIncome?: (data: { title: string; amount: number; category: string; user: string; destinationWalletId?: string; dateTime?: string }) => void;
   onSubmitDeposit: (data: { amount: number; user: string; note: string; sourceWalletId?: string; dateTime?: string }) => void;
   onSubmitTransfer: (data: { fromWalletId: string; toWalletId: string; amount: number; note?: string; dateTime?: string }) => void;
   onNavigateTab?: (tab: any) => void;
@@ -57,6 +58,7 @@ export const ActionModal: React.FC<ActionModalProps> = ({
   userRole = 'OWNER',
   onClose,
   onSubmitExpense,
+  onSubmitIncome,
   onSubmitDeposit,
   onSubmitTransfer,
 }) => {
@@ -64,11 +66,33 @@ export const ActionModal: React.FC<ActionModalProps> = ({
   const [amount, setAmount] = useState<string>('');
   const [title, setTitle] = useState<string>('');
   const [category, setCategory] = useState<string>('Ăn uống gia đình');
-  const [user, setUser] = useState<string>('Mẹ Lan');
+  const [user, setUser] = useState<string>('Tôi');
+  const [transactionSubtype, setTransactionSubtype] = useState<'expense' | 'income'>('expense');
+
+  useEffect(() => {
+    if (type === 'income') {
+      setTransactionSubtype('income');
+      setCategory('Tiền lương');
+    } else if (type === 'expense') {
+      setTransactionSubtype('expense');
+      setCategory('Ăn uống gia đình');
+    }
+  }, [type]);
 
   const [fromWalletId, setFromWalletId] = useState<string>(activeWallets[1]?.id || activeWallets[0]?.id || '');
   const [toWalletId, setToWalletId] = useState<string>(activeWallets[2]?.id || activeWallets[0]?.id || '');
   const [depositSourceId, setDepositSourceId] = useState<string>(activeWallets[1]?.id || activeWallets[0]?.id || '');
+
+  // Tự động chọn ví hợp lệ khi danh sách ví thay đổi, ưu tiên ví thật
+  useEffect(() => {
+    if (activeWallets.length > 0) {
+      const isValid = activeWallets.some((w) => w.id === fromWalletId);
+      if (!isValid) {
+        const realWallet = activeWallets.find((w) => !w.id.startsWith('w-'));
+        setFromWalletId(realWallet ? realWallet.id : activeWallets[0].id);
+      }
+    }
+  }, [activeWallets, fromWalletId]);
 
   const [note, setNote] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -97,7 +121,19 @@ export const ActionModal: React.FC<ActionModalProps> = ({
       return;
     }
 
-    if (type === 'expense' || type === 'quick_add') {
+    if (type === 'income' || ((type === 'expense' || type === 'quick_add') && transactionSubtype === 'income')) {
+      if (onSubmitIncome) {
+        onSubmitIncome({
+          title: title || 'Khoản thu nhập',
+          amount: numAmount,
+          category: category || 'Tiền lương',
+          user,
+          destinationWalletId: fromWalletId,
+          dateTime: dateTimeValue,
+        });
+      }
+      onClose();
+    } else if (type === 'expense' || type === 'quick_add') {
       onSubmitExpense({
         title: title || 'Chi tiêu gia đình',
         amount: numAmount,
@@ -167,7 +203,10 @@ export const ActionModal: React.FC<ActionModalProps> = ({
         return { text: 'Nạp quỹ gia đình chung', icon: PiggyBank, color: '#056839' };
       case 'expense':
       case 'quick_add':
-        return { text: 'Thêm khoản chi mới', icon: ReceiptText, color: '#EA580C' };
+      case 'income':
+        return transactionSubtype === 'income'
+          ? { text: 'Thêm khoản thu nhập mới', icon: ReceiptText, color: '#059669' }
+          : { text: 'Thêm khoản chi tiêu mới', icon: ReceiptText, color: '#EA580C' };
       case 'transfer':
         return { text: 'Chuyển tiền nội bộ', icon: ArrowLeftRight, color: '#0891B2' };
       case 'qr':
@@ -180,7 +219,7 @@ export const ActionModal: React.FC<ActionModalProps> = ({
   const modalInfo = getTitle();
   const IconComp = modalInfo.icon;
 
-  const categories = [
+  const expenseCategories = [
     'Ăn uống gia đình',
     'Giáo dục con cái',
     'Mua sắm sinh hoạt',
@@ -189,7 +228,19 @@ export const ActionModal: React.FC<ActionModalProps> = ({
     'Khoản khác',
   ];
 
-  const users = ['Mẹ Lan', 'Bố Minh', 'Ví gia đình chung'];
+  const incomeCategories = [
+    'Tiền lương',
+    'Tiền thưởng',
+    'Đầu tư sinh lời',
+    'Thu kinh doanh',
+    'Được tặng / biếu',
+    'Thu nhập khác',
+  ];
+
+  const activeCategories =
+    type === 'income' || transactionSubtype === 'income' ? incomeCategories : expenseCategories;
+
+  const users = ['Tôi', 'Gia đình'];
 
   return (
     <Modal
@@ -257,6 +308,53 @@ export const ActionModal: React.FC<ActionModalProps> = ({
                   </View>
                 ) : (
                   <View style={styles.form}>
+                    {/* Toggle Chi tiêu / Thu nhập */}
+                    {(type === 'expense' || type === 'quick_add' || type === 'income') && (
+                      <View style={styles.typeToggleRow}>
+                        <TouchableOpacity
+                          onPress={() => {
+                            setTransactionSubtype('expense');
+                            setCategory(expenseCategories[0]);
+                          }}
+                          style={[
+                            styles.typeToggleBtn,
+                            transactionSubtype === 'expense' && styles.typeToggleBtnActiveExpense,
+                          ]}
+                          activeOpacity={0.8}
+                        >
+                          <Text
+                            style={[
+                              styles.typeToggleText,
+                              transactionSubtype === 'expense' && styles.typeToggleTextActive,
+                            ]}
+                          >
+                            💸 Khoản Chi Tiêu
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() => {
+                            setTransactionSubtype('income');
+                            setCategory(incomeCategories[0]);
+                          }}
+                          style={[
+                            styles.typeToggleBtn,
+                            transactionSubtype === 'income' && styles.typeToggleBtnActiveIncome,
+                          ]}
+                          activeOpacity={0.8}
+                        >
+                          <Text
+                            style={[
+                              styles.typeToggleText,
+                              transactionSubtype === 'income' && styles.typeToggleTextActive,
+                            ]}
+                          >
+                            💰 Khoản Thu Nhập
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+
                     {/* Amount input */}
                     <View style={styles.fieldGroup}>
                       <Text style={styles.label}>Số tiền (VNĐ) (*)</Text>
@@ -273,17 +371,47 @@ export const ActionModal: React.FC<ActionModalProps> = ({
                       />
                     </View>
 
-                    {/* Expense title */}
-                    {(type === 'expense' || type === 'quick_add') && (
+                    {/* Expense / Income title */}
+                    {(type === 'expense' || type === 'quick_add' || type === 'income') && (
                       <View style={styles.fieldGroup}>
-                        <Text style={styles.label}>Tên khoản chi / Nội dung</Text>
+                        <Text style={styles.label}>
+                          {transactionSubtype === 'income' ? 'Nội dung khoản thu' : 'Tên khoản chi / Nội dung'}
+                        </Text>
                         <TextInput
-                          placeholder="VD: Đi chợ, Tiền điện tháng 10..."
+                          placeholder={
+                            transactionSubtype === 'income'
+                              ? 'VD: Tiền lương tháng này, Tiền thưởng, Bán đồ...'
+                              : 'VD: Đi chợ, Tiền điện nước, Mua sắm...'
+                          }
                           placeholderTextColor="#94A3B8"
                           value={title}
                           onChangeText={setTitle}
                           style={styles.textInput}
                         />
+                      </View>
+                    )}
+
+                    {/* Expense source / Income destination wallet */}
+                    {(type === 'expense' || type === 'quick_add' || type === 'income') && (
+                      <View style={styles.fieldGroup}>
+                        <Text style={styles.label}>
+                          {transactionSubtype === 'income'
+                            ? 'Cộng tiền vào ví (Ví nhận) (*)'
+                            : 'Nguồn tiền chi tiêu (Từ ví) (*)'}
+                        </Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+                          {activeWallets.map((w) => (
+                            <TouchableOpacity
+                              key={`expense-${w.id}`}
+                              onPress={() => setFromWalletId(w.id)}
+                              style={[styles.chip, fromWalletId === w.id && styles.chipActive]}
+                            >
+                              <Text style={[styles.chipText, fromWalletId === w.id && styles.chipTextActive]}>
+                                {w.name} ({w.balance.toLocaleString('vi-VN')} đ)
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
                       </View>
                     )}
 
@@ -345,11 +473,11 @@ export const ActionModal: React.FC<ActionModalProps> = ({
                     )}
 
                     {/* Category Selector */}
-                    {(type === 'expense' || type === 'quick_add') && (
+                    {(type === 'expense' || type === 'quick_add' || type === 'income') && (
                       <View style={styles.fieldGroup}>
-                        <Text style={styles.label}>Hạng mục</Text>
+                        <Text style={styles.label}>Hạng mục danh mục</Text>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-                          {categories.map((cat) => (
+                          {activeCategories.map((cat) => (
                             <TouchableOpacity
                               key={cat}
                               onPress={() => setCategory(cat)}
@@ -660,5 +788,44 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#DC2626',
     flex: 1,
+  },
+  typeToggleRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 16,
+    backgroundColor: '#F1F5F9',
+    padding: 4,
+    borderRadius: 16,
+  },
+  typeToggleBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 12,
+  },
+  typeToggleBtnActiveExpense: {
+    backgroundColor: '#EA580C',
+    shadowColor: '#EA580C',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  typeToggleBtnActiveIncome: {
+    backgroundColor: '#056839',
+    shadowColor: '#056839',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  typeToggleText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  typeToggleTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '800',
   },
 });

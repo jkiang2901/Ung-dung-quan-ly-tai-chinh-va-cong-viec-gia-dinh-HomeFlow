@@ -18,7 +18,7 @@ const generateToken = (userId, email) => {
 // @desc    Đăng ký tài khoản mới (lưu vào bảng profiles)
 router.post('/register', async (req, res, next) => {
   try {
-    const { email, password, display_name, avatar_url, timezone } = req.body;
+    const { email, password, display_name, avatar_url, timezone, phone } = req.body;
 
     if (!email || !password || !display_name) {
       return res.status(400).json({
@@ -50,6 +50,7 @@ router.post('/register', async (req, res, next) => {
       password_hash,
       display_name: display_name.trim(),
       avatar_url: avatar_url || null,
+      phone: phone ? phone.trim() : null,
       timezone: timezone || 'Asia/Ho_Chi_Minh',
     });
 
@@ -118,25 +119,91 @@ router.get('/me', requireAuth, async (req, res) => {
 });
 
 // @route   PUT /api/auth/profile
-// @desc    Cập nhật thông tin profile
+// @desc    Cập nhật thông tin profile (chỉ cho phép display_name, avatar_url, timezone)
 router.put('/profile', requireAuth, async (req, res, next) => {
   try {
-    const { display_name, avatar_url, timezone } = req.body;
+    const forbiddenFields = ['email', 'password', 'password_hash', 'role', 'id', '_id', 'created_at'];
+    const attemptedForbidden = forbiddenFields.filter((field) => field in req.body);
+
+    if (attemptedForbidden.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Không được phép thay đổi các trường: ${attemptedForbidden.join(', ')} qua endpoint này.`,
+      });
+    }
+
+    const { display_name, avatar_url, timezone, phone } = req.body;
     const updates = {};
 
-    if (display_name) updates.display_name = display_name;
-    if (avatar_url !== undefined) updates.avatar_url = avatar_url;
-    if (timezone) updates.timezone = timezone;
+    if (display_name !== undefined) {
+      if (typeof display_name !== 'string' || display_name.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Tên hiển thị (display_name) không được để trống.',
+        });
+      }
+      if (display_name.trim().length > 100) {
+        return res.status(400).json({
+          success: false,
+          message: 'Tên hiển thị không được vượt quá 100 ký tự.',
+        });
+      }
+      updates.display_name = display_name.trim();
+    }
+
+    if (avatar_url !== undefined) {
+      if (avatar_url !== null && typeof avatar_url !== 'string') {
+        return res.status(400).json({
+          success: false,
+          message: 'avatar_url phải là chuỗi đường dẫn hình ảnh hoặc null.',
+        });
+      }
+      updates.avatar_url = avatar_url;
+    }
+
+    if (phone !== undefined) {
+      if (phone !== null && typeof phone !== 'string') {
+        return res.status(400).json({
+          success: false,
+          message: 'phone phải là chuỗi số điện thoại hoặc null.',
+        });
+      }
+      updates.phone = phone ? phone.trim() : null;
+    }
+
+    if (timezone !== undefined) {
+      if (typeof timezone !== 'string' || timezone.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Múi giờ (timezone) phải là chuỗi hợp lệ.',
+        });
+      }
+      updates.timezone = timezone.trim();
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng cung cấp ít nhất một trường cần cập nhật: display_name, avatar_url, phone, timezone.',
+      });
+    }
 
     const updatedProfile = await Profile.findOneAndUpdate(
       { id: req.user.id },
       { $set: updates },
-      { new: true }
-    );
+      { new: true, runValidators: true }
+    ).select('-password_hash');
+
+    if (!updatedProfile) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy thông tin tài khoản người dùng.',
+      });
+    }
 
     res.json({
       success: true,
-      message: 'Cập nhật thông tin thành công',
+      message: 'Cập nhật thông tin thành công.',
       user: updatedProfile,
     });
   } catch (error) {

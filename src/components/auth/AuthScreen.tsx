@@ -20,7 +20,6 @@ import {
   ArrowRight,
   ArrowLeft,
   CheckCircle2,
-  Sparkles,
   ShieldCheck,
   KeyRound,
 } from 'lucide-react-native';
@@ -33,45 +32,12 @@ interface AuthScreenProps {
   onLoginSuccess: (user: AuthUser) => void;
 }
 
-export const DEMO_ACCOUNTS: AuthUser[] = [
-  {
-    id: 'm1',
-    name: 'Bố Minh',
-    email: 'owner@test.com',
-    phone: '0901234567',
-    role: 'OWNER',
-    roleLabel: 'Chủ Hộ Gia Đình',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
-    personalBalance: 18500000,
-  },
-  {
-    id: 'm2',
-    name: 'Mẹ Lan',
-    email: 'member@test.com',
-    phone: '0912345678',
-    role: 'MEMBER',
-    roleLabel: 'Thành Viên Gia Đình',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=250',
-    personalBalance: 12800000,
-  },
-  {
-    id: 'm3',
-    name: 'Bé Bi',
-    email: 'viewer@test.com',
-    phone: '0923456789',
-    role: 'VIEWER',
-    roleLabel: 'Trẻ Em',
-    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=250',
-    personalBalance: 2000000,
-  },
-];
-
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const [mode, setMode] = useState<AuthMode>('login');
 
   // Login form state
-  const [loginEmail, setLoginEmail] = useState('owner@test.com');
-  const [loginPassword, setLoginPassword] = useState('123456');
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
@@ -128,31 +94,20 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
       api.setToken(res.token);
 
-      const matchedDemo = DEMO_ACCOUNTS.find(
-        (a) => a.email.toLowerCase() === res.user.email.toLowerCase()
-      );
-
       const userToLogin: AuthUser = {
         id: res.user.id,
         name: res.user.display_name,
         email: res.user.email,
-        role: matchedDemo?.role || 'OWNER',
-        roleLabel: matchedDemo?.roleLabel || 'Chủ Hộ Gia Đình',
-        avatar: res.user.avatar_url || matchedDemo?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
-        personalBalance: matchedDemo?.personalBalance || 15000000,
+        phone: res.user.phone || undefined,
+        role: 'OWNER',
+        roleLabel: 'Chủ Hộ Gia Đình',
+        avatar: res.user.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+        personalBalance: 0,
       };
 
       onLoginSuccess(userToLogin);
     } catch (err: any) {
-      // Fallback cho tài khoản demo offline nếu server chưa khởi động
-      const matched = DEMO_ACCOUNTS.find(
-        (a) => a.email.toLowerCase() === loginEmail.trim().toLowerCase()
-      );
-      if (matched && (err.message?.includes('Failed to fetch') || err.message?.includes('Network request failed'))) {
-        onLoginSuccess(matched);
-      } else {
-        setErrorMessage(err.message || 'Email hoặc mật khẩu không chính xác');
-      }
+      setErrorMessage(err.message || 'Email hoặc mật khẩu không chính xác');
     } finally {
       setLoading(false);
     }
@@ -373,31 +328,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                 <Text style={styles.primaryButtonText}>{loading ? 'Đang đăng nhập...' : 'Đăng nhập'}</Text>
                 <ArrowRight size={18} color="#FFFFFF" />
               </TouchableOpacity>
-
-              {/* Quick Demo Access */}
-              <View style={styles.demoSection}>
-                <View style={styles.demoDivider}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.demoDividerText}>ĐĂNG NHẬP NHANH BẰNG TÀI KHOẢN MẪU</Text>
-                  <View style={styles.dividerLine} />
-                </View>
-
-                <View style={styles.demoPillsRow}>
-                  {DEMO_ACCOUNTS.map((acc) => (
-                    <TouchableOpacity
-                      key={acc.id}
-                      style={styles.demoPill}
-                      onPress={() => onLoginSuccess(acc)}
-                      activeOpacity={0.7}
-                    >
-                      <Sparkles size={14} color="#056839" />
-                      <Text style={styles.demoPillText}>
-                        {acc.name} ({acc.role === 'OWNER' ? 'Chủ Hộ' : acc.role === 'MEMBER' ? 'Thành Viên' : 'Trẻ Em'})
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
 
               {/* Switch to Register */}
               <View style={styles.switchAuthRow}>

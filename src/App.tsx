@@ -17,24 +17,18 @@ import { WalletModal } from './components/modals/WalletModal';
 import { StatementModal } from './components/modals/StatementModal';
 import { BudgetLimitModal } from './components/modals/BudgetLimitModal';
 import { InviteMemberModal } from './components/modals/InviteMemberModal';
+import { EditProfileModal } from './components/modals/EditProfileModal';
 import { WalletTab } from './components/tabs/WalletTab';
 import { StatisticsTab } from './components/tabs/StatisticsTab';
 import { TasksTab } from './components/tabs/TasksTab';
 import { FamilyTab } from './components/tabs/FamilyTab';
 import { SplashScreen } from './components/SplashScreen';
-import { AuthScreen, DEMO_ACCOUNTS } from './components/auth/AuthScreen';
-import {
-  INITIAL_MEMBERS,
-  INITIAL_WALLETS,
-  INITIAL_TRANSACTIONS,
-  INITIAL_BUDGET_LIMITS,
-  INITIAL_INVITATIONS,
-  INITIAL_TASKS,
-} from './mockData';
+import { AuthScreen } from './components/auth/AuthScreen';
 import {
   api,
   mapBackendAccountToWallet,
   mapBackendTransactionToUi,
+  mapBackendTaskToUi,
   mapUiWalletTypeToBackend,
 } from './services/api';
 import type {
@@ -51,20 +45,32 @@ import type {
 export function App() {
   const [showSplash, setShowSplash] = useState<boolean>(true);
 
-  // Default login: OWNER (Bố Minh owner@test.com)
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(DEMO_ACCOUNTS[0]);
+  // Không có user mặc định - phải đăng nhập thật qua MongoDB Atlas
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
 
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [actionModalType, setActionModalType] = useState<ModalType>(null);
   const [toast, setToast] = useState<string | null>(null);
 
-  // App domain states
-  const [members] = useState(INITIAL_MEMBERS);
-  const [wallets, setWallets] = useState<Wallet[]>(INITIAL_WALLETS);
-  const [transactions, setTransactions] = useState<Transaction[]>(INITIAL_TRANSACTIONS);
-  const [budgetLimits, setBudgetLimits] = useState<CategoryBudget[]>(INITIAL_BUDGET_LIMITS);
-  const [invitations, setInvitations] = useState<FamilyInvitation[]>(INITIAL_INVITATIONS);
-  const [tasks, setTasks] = useState<HouseholdTask[]>(INITIAL_TASKS);
+  // App domain states - khởi tạo rỗng, dữ liệu thật lấy từ MongoDB Atlas
+  const members: FamilyMember[] = currentUser
+    ? [
+        {
+          id: currentUser.id,
+          name: currentUser.name,
+          role: currentUser.role,
+          roleLabel: currentUser.roleLabel,
+          avatar: currentUser.avatar,
+          email: currentUser.email,
+          phone: currentUser.phone,
+        },
+      ]
+    : [];
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [budgetLimits, setBudgetLimits] = useState<CategoryBudget[]>([]);
+  const [invitations, setInvitations] = useState<FamilyInvitation[]>([]);
+  const [tasks, setTasks] = useState<HouseholdTask[]>([]);
 
   // Additional Modal States
   const [walletModal, setWalletModal] = useState<{
@@ -80,15 +86,16 @@ export function App() {
   const [statementVisible, setStatementVisible] = useState<boolean>(false);
   const [budgetLimitsVisible, setBudgetLimitsVisible] = useState<boolean>(false);
   const [inviteModalVisible, setInviteModalVisible] = useState<boolean>(false);
+  const [editProfileVisible, setEditProfileVisible] = useState<boolean>(false);
 
   // Derived Values
   const userRole: RoleType = currentUser?.role || 'OWNER';
   const fundWallet = wallets.find((w) => w.id === 'w-fund');
-  const fundBalance = fundWallet ? fundWallet.balance : 48250000;
+  const fundBalance = fundWallet ? fundWallet.balance : 0;
 
   const totalIncome = transactions
     .filter((t) => t.type === 'income')
-    .reduce((sum, t) => sum + Math.abs(t.amount), 65000000);
+    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
   const totalExpense = transactions
     .filter((t) => t.type === 'expense')
@@ -103,6 +110,32 @@ export function App() {
     }, 3200);
   };
 
+  // Khôi phục phiên đăng nhập thật nếu đã lưu token trong localStorage
+  useEffect(() => {
+    const restoreSession = async () => {
+      const token = api.getToken();
+      if (!token) return;
+
+      try {
+        const res = await api.auth.getProfile();
+        if (res.success && res.user) {
+          setCurrentUser({
+            id: res.user.id,
+            name: res.user.display_name,
+            email: res.user.email,
+            role: 'OWNER',
+            roleLabel: 'Chủ Hộ Gia Đình',
+            avatar: res.user.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+            personalBalance: 0,
+          });
+        }
+      } catch {
+        api.setToken(null);
+      }
+    };
+    restoreSession();
+  }, []);
+
   // Tải dữ liệu thật từ MongoDB Atlas khi người dùng đăng nhập
   const fetchBackendData = useCallback(async () => {
     if (!currentUser) return;
@@ -110,7 +143,7 @@ export function App() {
     try {
       // 1. Tải danh sách ví tiền từ MongoDB (bảng accounts)
       const accountsRes = await api.accounts.list();
-      if (accountsRes.success && accountsRes.data && accountsRes.data.length > 0) {
+      if (accountsRes.success && Array.isArray(accountsRes.data)) {
         const mappedWallets = accountsRes.data.map((acc: any) =>
           mapBackendAccountToWallet(acc, currentUser.name)
         );
@@ -119,12 +152,19 @@ export function App() {
 
       // 2. Tải danh sách giao dịch từ MongoDB (bảng transactions)
       const transactionsRes = await api.transactions.list({ limit: 50 });
-      if (transactionsRes.success && transactionsRes.data && transactionsRes.data.length > 0) {
+      if (transactionsRes.success && Array.isArray(transactionsRes.data)) {
         const mappedTx = transactionsRes.data.map(mapBackendTransactionToUi);
         setTransactions(mappedTx);
       }
-    } catch {
-      // Giữ mock data offline nếu chưa kết nối tới server
+
+      // 3. Tải danh sách việc nhà từ MongoDB (bảng tasks)
+      const tasksRes = await api.tasks.list();
+      if (tasksRes.success && Array.isArray(tasksRes.data)) {
+        const mappedTasks = tasksRes.data.map(mapBackendTaskToUi);
+        setTasks(mappedTasks);
+      }
+    } catch (err: any) {
+      console.warn('⚠️ Không thể kết nối tới MongoDB Atlas:', err.message);
     }
   }, [currentUser]);
 
@@ -142,6 +182,10 @@ export function App() {
   const handleLogout = () => {
     api.setToken(null);
     setCurrentUser(null);
+    setWallets([]);
+    setTransactions([]);
+    setBudgetLimits([]);
+    setInvitations([]);
     showToastMessage('Đã đăng xuất khỏi tài khoản');
   };
 
@@ -253,7 +297,7 @@ export function App() {
     showToastMessage(`Đã xóa hoàn toàn ví "${target?.name || ''}"`);
   };
 
-  // 5. CHUYỂN TIỀN NỘI BỘ (Lưu vào bảng transaction_transfers)
+  // 5. CHUYỂN TIỀN NỘI BỘ (Lưu vào MongoDB Atlas)
   const handleTransfer = async (data: {
     fromWalletId: string;
     toWalletId: string;
@@ -280,49 +324,25 @@ export function App() {
     }
 
     try {
-      await api.transactions.transfer({
+      const res = await api.transactions.transfer({
         from_account_id: sourceW.id,
         to_account_id: destW.id,
         amount: data.amount,
         note: data.note,
       });
-    } catch {
-      // ignore
+
+      if (res.success) {
+        await fetchBackendData();
+        showToastMessage(`✅ Đã chuyển ${data.amount.toLocaleString('vi-VN')} đ từ ${sourceW.name} đến ${destW.name}`);
+        return;
+      }
+    } catch (err: any) {
+      showToastMessage(`⚠️ Lỗi chuyển tiền: ${err.message || 'Thất bại'}`);
     }
-
-    // Cập nhật số dư các ví
-    setWallets((prev) =>
-      prev.map((w) => {
-        if (w.id === data.fromWalletId) return { ...w, balance: w.balance - data.amount };
-        if (w.id === data.toWalletId) return { ...w, balance: w.balance + data.amount };
-        return w;
-      })
-    );
-
-    const displayDate = data.dateTime ? data.dateTime.split(' - ')[0] : new Date().toLocaleDateString('vi-VN');
-    const newTx: Transaction = {
-      id: `tx-${Date.now()}`,
-      title: `Chuyển tiền: ${sourceW.name} → ${destW.name}`,
-      user: currentUser?.name || 'Thành viên',
-      time: data.dateTime ? data.dateTime.split(' - ')[1] || 'Vừa xong' : 'Vừa xong',
-      date: displayDate,
-      amount: data.amount,
-      type: 'transfer',
-      category: 'Chuyển ví nội bộ',
-      iconType: 'transfer',
-      sourceWalletId: sourceW.id,
-      sourceWalletName: sourceW.name,
-      destinationWalletId: destW.id,
-      destinationWalletName: destW.name,
-      note: data.note,
-    };
-
-    setTransactions((prev) => [newTx, ...prev]);
-    showToastMessage(`Chuyển ${data.amount.toLocaleString('vi-VN')} đ từ ${sourceW.name} đến ${destW.name}`);
   };
 
-  // 6. NẠP QUỸ CHUNG (Khấu trừ ví nguồn, tăng Quỹ chung)
-  const handleDeposit = (data: {
+  // 6. NẠP QUỸ CHUNG (Lưu vào MongoDB Atlas)
+  const handleDeposit = async (data: {
     amount: number;
     user: string;
     note: string;
@@ -334,7 +354,7 @@ export function App() {
       return;
     }
 
-    const sourceW = wallets.find((w) => w.id === data.sourceWalletId) || wallets.find((w) => w.type === 'Ngân hàng');
+    const sourceW = wallets.find((w) => w.id === data.sourceWalletId) || wallets.find((w) => w.type === 'Ngân hàng') || wallets[0];
     if (!sourceW) {
       showToastMessage('Vui lòng chọn nguồn tiền nạp quỹ.');
       return;
@@ -345,38 +365,31 @@ export function App() {
       return;
     }
 
-    // Khấu trừ ví nguồn, tăng ví Quỹ chung
-    setWallets((prev) =>
-      prev.map((w) => {
-        if (w.id === sourceW.id) return { ...w, balance: w.balance - data.amount };
-        if (w.id === 'w-fund') return { ...w, balance: w.balance + data.amount };
-        return w;
-      })
-    );
+    try {
+      if (fundWallet && fundWallet.id !== sourceW.id) {
+        await api.transactions.transfer({
+          from_account_id: sourceW.id,
+          to_account_id: fundWallet.id,
+          amount: data.amount,
+          note: data.note || 'Nạp quỹ chung gia đình',
+        });
+      } else {
+        await api.transactions.create({
+          account_id: sourceW.id,
+          amount: data.amount,
+          type: 'expense',
+          note: `Nạp quỹ chung: ${data.note || 'Đóng góp gia đình'}`,
+        });
+      }
 
-    const displayDate = data.dateTime ? data.dateTime.split(' - ')[0] : new Date().toLocaleDateString('vi-VN');
-    const newTx: Transaction = {
-      id: `tx-${Date.now()}`,
-      title: `Nạp quỹ chung: ${data.note || 'Đóng góp gia đình'}`,
-      user: data.user || currentUser?.name || 'Bố Minh',
-      time: data.dateTime ? data.dateTime.split(' - ')[1] || 'Vừa xong' : 'Vừa xong',
-      date: displayDate,
-      amount: data.amount,
-      type: 'contribution',
-      category: 'Đóng góp quỹ',
-      iconType: 'salary',
-      sourceWalletId: sourceW.id,
-      sourceWalletName: sourceW.name,
-      destinationWalletId: 'w-fund',
-      destinationWalletName: 'Quỹ gia đình chung',
-      note: data.note,
-    };
-
-    setTransactions((prev) => [newTx, ...prev]);
-    showToastMessage(`Đã nộp +${data.amount.toLocaleString('vi-VN')} đ từ ${sourceW.name} vào Quỹ chung`);
+      await fetchBackendData();
+      showToastMessage(`✅ Đã nộp +${data.amount.toLocaleString('vi-VN')} đ từ ${sourceW.name} vào Quỹ chung`);
+    } catch (err: any) {
+      showToastMessage(`⚠️ Lỗi nạp quỹ: ${err.message || 'Không thể nạp quỹ'}`);
+    }
   };
 
-  // 7. THÊM KHOẢN CHI TIÊU (Lưu vào bảng transactions trên MongoDB Atlas)
+  // 7. THÊM KHOẢN CHI TIÊU (Lưu vào MongoDB Atlas)
   const handleAddExpense = async (data: {
     title: string;
     amount: number;
@@ -391,58 +404,114 @@ export function App() {
     }
 
     const targetWallet = wallets.find((w) => w.id === data.sourceWalletId) || fundWallet || wallets[0];
+    if (!targetWallet) {
+      showToastMessage('Vui lòng tạo hoặc chọn ví tiền trước khi chi tiêu.');
+      return;
+    }
+
     if (targetWallet && targetWallet.balance < data.amount) {
       showToastMessage(`Cảnh báo: Số dư ví "${targetWallet.name}" đang bị âm/thiếu.`);
     }
 
-    if (targetWallet) {
-      setWallets((prev) =>
-        prev.map((w) => (w.id === targetWallet.id ? { ...w, balance: w.balance - data.amount } : w))
-      );
-    }
+    try {
+      const res = await api.transactions.create({
+        account_id: targetWallet.id,
+        amount: data.amount,
+        type: 'expense',
+        note: data.title,
+      });
 
-    const displayDate = data.dateTime ? data.dateTime.split(' - ')[0] : new Date().toLocaleDateString('vi-VN');
+      if (res.success && res.data) {
+        const newTx = mapBackendTransactionToUi(res.data);
+        newTx.category = data.category;
+        newTx.user = data.user;
+        newTx.sourceWalletName = targetWallet.name;
+        setTransactions((prev) => [newTx, ...prev]);
 
-    // Gửi yêu cầu lưu vào MongoDB Atlas (collection transactions)
-    if (targetWallet) {
-      try {
-        const res = await api.transactions.create({
-          account_id: targetWallet.id,
-          amount: data.amount,
-          type: 'expense',
-          note: data.title,
-        });
+        const newBalance = res.balance !== undefined ? res.balance : targetWallet.balance - data.amount;
+        setWallets((prev) =>
+          prev.map((w) => (w.id === targetWallet.id ? { ...w, balance: newBalance } : w))
+        );
 
-        if (res.success && res.data) {
-          const newTx = mapBackendTransactionToUi(res.data);
-          newTx.category = data.category;
-          newTx.user = data.user;
-          newTx.sourceWalletName = targetWallet.name;
-          setTransactions((prev) => [newTx, ...prev]);
-          showToastMessage(`Đã lưu chi tiêu -${data.amount.toLocaleString('vi-VN')} đ lên MongoDB Atlas!`);
-          return;
-        }
-      } catch {
-        // Fallback local
+        showToastMessage(`✅ Đã lưu chi tiêu -${data.amount.toLocaleString('vi-VN')} đ lên MongoDB Atlas!`);
+      } else {
+        showToastMessage(`⚠️ Lỗi: ${res.message || 'Không thể tạo chi tiêu'}`);
       }
+    } catch (err: any) {
+      console.warn('Lỗi lưu giao dịch MongoDB:', err);
+      showToastMessage(`⚠️ Lỗi lưu MongoDB: ${err.message || 'Không thể tạo giao dịch'}`);
+    }
+  };
+
+  // 8. THÊM KHOẢN THU NHẬP (Lưu vào MongoDB Atlas)
+  const handleAddIncome = async (data: {
+    title: string;
+    amount: number;
+    category: string;
+    user: string;
+    destinationWalletId?: string;
+    dateTime?: string;
+  }) => {
+    if (userRole === 'VIEWER') {
+      showToastMessage('⚠️ Tài khoản Trẻ Em không có quyền ghi thu nhập.');
+      return;
     }
 
-    const newTx: Transaction = {
-      id: `tx-${Date.now()}`,
-      title: data.title,
-      user: data.user,
-      time: data.dateTime ? data.dateTime.split(' - ')[1] || 'Vừa xong' : 'Vừa xong',
-      date: displayDate,
-      amount: -data.amount,
-      type: 'expense',
-      category: data.category,
-      iconType: 'shopping',
-      sourceWalletId: targetWallet?.id,
-      sourceWalletName: targetWallet?.name,
-    };
+    const targetWallet = wallets.find((w) => w.id === data.destinationWalletId) || fundWallet || wallets[0];
+    if (!targetWallet) {
+      showToastMessage('Vui lòng tạo hoặc chọn ví tiền để nhận thu nhập.');
+      return;
+    }
 
-    setTransactions((prev) => [newTx, ...prev]);
-    showToastMessage(`Đã ghi nhận chi tiêu -${data.amount.toLocaleString('vi-VN')} đ cho ${data.title}`);
+    try {
+      const res = await api.transactions.create({
+        account_id: targetWallet.id,
+        amount: data.amount,
+        type: 'income',
+        note: data.title,
+      });
+
+      if (res.success && res.data) {
+        const newTx = mapBackendTransactionToUi(res.data);
+        newTx.category = data.category || 'Thu nhập';
+        newTx.user = data.user || currentUser?.name || 'Tôi';
+        newTx.sourceWalletName = targetWallet.name;
+        setTransactions((prev) => [newTx, ...prev]);
+
+        const newBalance = res.balance !== undefined ? res.balance : targetWallet.balance + data.amount;
+        setWallets((prev) =>
+          prev.map((w) => (w.id === targetWallet.id ? { ...w, balance: newBalance } : w))
+        );
+
+        showToastMessage(`✅ Đã lưu khoản thu +${data.amount.toLocaleString('vi-VN')} đ lên MongoDB Atlas!`);
+      } else {
+        showToastMessage(`⚠️ Lỗi: ${res.message || 'Không thể tạo thu nhập'}`);
+      }
+    } catch (err: any) {
+      console.warn('Lỗi lưu thu nhập MongoDB:', err);
+      showToastMessage(`⚠️ Lỗi lưu MongoDB: ${err.message || 'Không thể tạo thu nhập'}`);
+    }
+  };
+
+  // 9. XÓA GIAO DỊCH (Xóa khỏi MongoDB Atlas và cập nhật lại số dư ví)
+  const handleDeleteTransaction = async (id: string) => {
+    if (userRole === 'VIEWER') {
+      showToastMessage('⚠️ Tài khoản Trẻ Em không có quyền xóa giao dịch.');
+      return;
+    }
+
+    try {
+      const res = await api.transactions.delete(id);
+      if (res.success) {
+        setTransactions((prev) => prev.filter((t) => t.id !== id));
+        await fetchBackendData();
+        showToastMessage('✅ Đã xóa giao dịch khỏi MongoDB Atlas thành công!');
+      } else {
+        showToastMessage(`⚠️ Không thể xóa: ${res.message || 'Lỗi server'}`);
+      }
+    } catch (err: any) {
+      showToastMessage(`⚠️ Lỗi xóa giao dịch: ${err.message || 'Không thể xóa'}`);
+    }
   };
 
   // 8. CẬP NHẬT HẠN MỨC
@@ -471,7 +540,7 @@ export function App() {
       role,
       status: 'pending',
       createdAt: new Date().toLocaleDateString('vi-VN'),
-      invitedBy: currentUser?.name || 'Bố Minh',
+      invitedBy: currentUser?.name || 'Chủ hộ',
     };
 
     setInvitations((prev) => [newInv, ...prev]);
@@ -484,13 +553,39 @@ export function App() {
     showToastMessage('Đã hủy lời mời.');
   };
 
-  const handleToggleTask = (id: string) => {
+  const handleToggleTask = async (id: string) => {
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)));
+    try {
+      await api.tasks.toggle(id);
+    } catch (err: any) {
+      console.warn('Lỗi cập nhật việc nhà trên MongoDB:', err);
+    }
   };
 
-  const handleAddTask = (newTask: HouseholdTask) => {
+  const handleAddTask = async (newTask: HouseholdTask) => {
+    try {
+      const res = await api.tasks.create({
+        title: newTask.title,
+        time: newTask.time,
+        amount: newTask.amount,
+        assigned_to: newTask.assignedTo,
+        avatar_url: newTask.avatarUrl,
+        tag: newTask.tag,
+        priority: newTask.priority,
+      });
+
+      if (res.success && res.data) {
+        const saved = mapBackendTaskToUi(res.data);
+        setTasks((prev) => [saved, ...prev]);
+        showToastMessage(`✅ Đã lưu việc nhà "${newTask.title}" lên MongoDB Atlas!`);
+        return;
+      }
+    } catch (err: any) {
+      console.warn('Lỗi lưu việc nhà lên MongoDB Atlas:', err);
+      showToastMessage(`⚠️ Lỗi lưu việc nhà: ${err.message || 'Không thể tạo việc nhà'}`);
+    }
+
     setTasks((prev) => [newTask, ...prev]);
-    showToastMessage(`Đã thêm việc nhà: "${newTask.title}"`);
   };
 
   const renderActiveTabContent = () => {
@@ -501,7 +596,7 @@ export function App() {
             <Greeting userName={currentUser?.name || 'bạn'} />
             <PersonalWalletCard
               userName={currentUser?.name || 'Cá nhân'}
-              balance={currentUser?.personalBalance ?? 18500000}
+              balance={currentUser?.personalBalance ?? 0}
               familyFundBalance={fundBalance}
               onGoToFamilyFund={() => setActiveTab('wallet')}
               onDepositToFund={() => setActionModalType('deposit')}
@@ -606,6 +701,7 @@ export function App() {
             onOpenNotifications={() => showToastMessage('Bạn không có thông báo mới!')}
             onLogout={handleLogout}
             onOpenFamily={() => setActiveTab('family')}
+            onOpenProfile={() => setEditProfileVisible(true)}
           />
 
           {renderActiveTabContent()}
@@ -623,6 +719,7 @@ export function App() {
             userRole={userRole}
             onClose={() => setActionModalType(null)}
             onSubmitExpense={handleAddExpense}
+            onSubmitIncome={handleAddIncome}
             onSubmitDeposit={handleDeposit}
             onSubmitTransfer={handleTransfer}
             onNavigateTab={setActiveTab}
@@ -655,6 +752,7 @@ export function App() {
             visible={statementVisible}
             transactions={transactions}
             onClose={() => setStatementVisible(false)}
+            onDeleteTransaction={handleDeleteTransaction}
           />
 
           <BudgetLimitModal
@@ -675,6 +773,16 @@ export function App() {
             onClose={() => setInviteModalVisible(false)}
             onSendInvitation={handleSendInvitation}
             onCancelInvitation={handleCancelInvitation}
+          />
+
+          <EditProfileModal
+            visible={editProfileVisible}
+            currentUser={currentUser}
+            onClose={() => setEditProfileVisible(false)}
+            onProfileUpdated={(updatedUser) => {
+              setCurrentUser(updatedUser);
+              showToastMessage('✅ Đã cập nhật thông tin cá nhân trên MongoDB Atlas!');
+            }}
           />
         </View>
       )}

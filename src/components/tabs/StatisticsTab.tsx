@@ -1,729 +1,725 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Modal,
+  ActivityIndicator,
 } from 'react-native';
 import {
-  Coffee,
-  Droplets,
-  House,
-  Car,
-  Sparkles,
-  CalendarDays,
-  CircleDot,
-  PiggyBank,
-  Landmark,
-  BriefcaseBusiness,
   TrendingUp,
-  CircleDollarSign,
-  Users,
+  TrendingDown,
+  Calendar,
+  PieChart,
+  Tag,
+  RefreshCw,
+  Sparkles,
+  ArrowUpRight,
+  ArrowDownLeft,
+  CircleDot,
+  CheckCircle2,
 } from 'lucide-react-native';
+import { api, type TransactionStatistics } from '../../services/api';
 
 type StatMode = 'expense' | 'income';
-type DataScope = 'family' | 'personal';
-
-interface StatCategory {
-  name: string;
-  subtitle: string;
-  amount: number;
-  icon: React.ComponentType<any>;
-  iconColor: string;
-  bgColor: string;
-}
+type TimeRangeKey = 'this_month' | 'last_month' | 'all_time';
 
 export const StatisticsTab: React.FC = () => {
   const [statMode, setStatMode] = useState<StatMode>('expense');
-  const [dataScope, setDataScope] = useState<DataScope>('family');
-  const [showDataScopeModal, setShowDataScopeModal] = useState(false);
+  const [timeRange, setTimeRange] = useState<TimeRangeKey>('this_month');
+  const [loading, setLoading] = useState<boolean>(true);
+  const [statsData, setStatsData] = useState<TransactionStatistics | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const familyExpenseCategories: StatCategory[] = [
-    { name: 'Ăn uống', subtitle: 'Không có kế hoạch', amount: 1200000, icon: Coffee, iconColor: '#A16207', bgColor: '#F7E6A3' },
-    { name: 'Sinh hoạt', subtitle: 'Không có kế hoạch', amount: 550000, icon: Droplets, iconColor: '#0369A1', bgColor: '#DDEEFF' },
-    { name: 'Con cái', subtitle: 'Không có kế hoạch', amount: 600000, icon: Users, iconColor: '#7C3AED', bgColor: '#E9D5FF' },
-    { name: 'Nhà cửa', subtitle: 'Không có kế hoạch', amount: 2400000, icon: House, iconColor: '#A16207', bgColor: '#F7E6A3' },
-    { name: 'Khác', subtitle: 'Không có kế hoạch', amount: 700000, icon: CircleDollarSign, iconColor: '#0F766E', bgColor: '#CCFBF1' },
-  ];
-
-  const familyIncomeCategories: StatCategory[] = [
-    { name: 'Lương', subtitle: 'Không có kế hoạch', amount: 24000000, icon: BriefcaseBusiness, iconColor: '#0F766E', bgColor: '#D1FAE5' },
-    { name: 'Khác', subtitle: 'Không có kế hoạch', amount: 3500000, icon: CircleDollarSign, iconColor: '#A16207', bgColor: '#FDE68A' },
-  ];
-
-  const personalExpenseCategories: StatCategory[] = [
-    { name: 'Ăn uống', subtitle: 'Không có kế hoạch', amount: 480000, icon: Coffee, iconColor: '#A16207', bgColor: '#F7E6A3' },
-    { name: 'Sinh hoạt', subtitle: 'Không có kế hoạch', amount: 300000, icon: Droplets, iconColor: '#0369A1', bgColor: '#DDEEFF' },
-    { name: 'Nhà cửa', subtitle: 'Không có kế hoạch', amount: 900000, icon: House, iconColor: '#A16207', bgColor: '#F7E6A3' },
-    { name: 'Bản thân', subtitle: 'Không có kế hoạch', amount: 450000, icon: Sparkles, iconColor: '#A16207', bgColor: '#F7E6A3' },
-    { name: 'Đi lại', subtitle: 'Không có kế hoạch', amount: 520000, icon: Car, iconColor: '#0F766E', bgColor: '#CCFBF1' },
-    { name: 'Sức khoẻ', subtitle: 'Không có kế hoạch', amount: 350000, icon: CircleDot, iconColor: '#E11D48', bgColor: '#FFE4E6' },
-    { name: 'Con cái', subtitle: 'Không có kế hoạch', amount: 650000, icon: Users, iconColor: '#7C3AED', bgColor: '#E9D5FF' },
-    { name: 'Giải trí', subtitle: 'Không có kế hoạch', amount: 280000, icon: Sparkles, iconColor: '#D97706', bgColor: '#FEF3C7' },
-    { name: 'Khác', subtitle: 'Không có kế hoạch', amount: 180000, icon: CircleDollarSign, iconColor: '#475569', bgColor: '#E2E8F0' },
-  ];
-
-  const personalIncomeCategories: StatCategory[] = [
-    { name: 'Lương', subtitle: 'Không có kế hoạch', amount: 12000000, icon: BriefcaseBusiness, iconColor: '#0F766E', bgColor: '#D1FAE5' },
-    { name: 'Thưởng', subtitle: 'Không có kế hoạch', amount: 1800000, icon: CircleDollarSign, iconColor: '#A16207', bgColor: '#FDE68A' },
-    { name: 'Đầu tư', subtitle: 'Không có kế hoạch', amount: 2500000, icon: TrendingUp, iconColor: '#1D4ED8', bgColor: '#DBEAFE' },
-    { name: 'Lãi', subtitle: 'Không có kế hoạch', amount: 300000, icon: PiggyBank, iconColor: '#0F766E', bgColor: '#CCFBF1' },
-    { name: 'Kinh doanh', subtitle: 'Không có kế hoạch', amount: 1500000, icon: Landmark, iconColor: '#7C3AED', bgColor: '#E9D5FF' },
-    { name: 'Trợ cấp', subtitle: 'Không có kế hoạch', amount: 800000, icon: CircleDollarSign, iconColor: '#0369A1', bgColor: '#DDEEFF' },
-    { name: 'Khác', subtitle: 'Không có kế hoạch', amount: 500000, icon: Sparkles, iconColor: '#475569', bgColor: '#E2E8F0' },
-  ];
-
-  const categories = useMemo(() => {
-    if (dataScope === 'family') {
-      return statMode === 'expense' ? familyExpenseCategories : familyIncomeCategories;
+  const getDateRangeParams = useCallback((): { start_date?: string; end_date?: string } => {
+    const now = new Date();
+    if (timeRange === 'this_month') {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      return {
+        start_date: start.toISOString().split('T')[0],
+        end_date: end.toISOString().split('T')[0],
+      };
+    } else if (timeRange === 'last_month') {
+      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+      return {
+        start_date: start.toISOString().split('T')[0],
+        end_date: end.toISOString().split('T')[0],
+      };
     }
-    return statMode === 'expense' ? personalExpenseCategories : personalIncomeCategories;
-  }, [dataScope, statMode]);
+    // all_time
+    return {};
+  }, [timeRange]);
 
-  const totalLabel = statMode === 'expense' ? 'Tổng chi tiêu' : 'Tổng thu nhập';
-  const totalValue = categories.reduce((sum, item) => sum + item.amount, 0);
-  const totalValueLabel = totalValue.toLocaleString('vi-VN');
-  const scopeColor = dataScope === 'personal' ? '#056839' : '#D9468F';
-  const scopeTint = dataScope === 'personal' ? '#EAF7F0' : '#FCE7F3';
-  const scopeBorder = dataScope === 'personal' ? '#CDEAD9' : '#FBCFE8';
+  const fetchStats = useCallback(async () => {
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      const dates = getDateRangeParams();
+      const res = await api.transactions.statistics({
+        start_date: dates.start_date,
+        end_date: dates.end_date,
+        group_by: timeRange === 'all_time' ? 'month' : 'day',
+      });
 
-  const chartCols = [0, 20, 40, 60, 80, 100];
-  const chartRows = [0, 20, 40, 60, 80, 100];
+      if (res.success && res.data) {
+        setStatsData(res.data);
+      } else {
+        setErrorMsg('Không thể tải dữ liệu thống kê từ MongoDB Atlas.');
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Lỗi kết nối máy chủ MongoDB Atlas.');
+    } finally {
+      setLoading(false);
+    }
+  }, [getDateRangeParams, timeRange]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  const summary = statsData?.summary || {
+    total_income: 0,
+    total_expense: 0,
+    net_income: 0,
+    transaction_count: 0,
+  };
+
+  const categories =
+    statMode === 'expense'
+      ? statsData?.by_category || []
+      : statsData?.by_income_category || [];
+
+  const totalValue = statMode === 'expense' ? summary.total_expense : summary.total_income;
+  const breakdown = statsData?.breakdown || [];
+
+  const formatMoney = (val: number) => val.toLocaleString('vi-VN');
 
   return (
-    <>
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.title}>Thống kê</Text>
-            <Text style={styles.range}>Kỳ: 01/10/26 - 31/10/26</Text>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* 1. Header & Live Indicator */}
+      <View style={styles.headerRow}>
+        <View>
+          <Text style={styles.title}>Thống kê tài chính</Text>
+          <View style={styles.liveBadgeRow}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveText}>MongoDB Atlas Trực tuyến</Text>
           </View>
+        </View>
 
-          <View style={styles.scopeControl}>
+        <TouchableOpacity onPress={fetchStats} style={styles.refreshBtn} activeOpacity={0.7}>
+          <RefreshCw size={16} color="#056839" />
+          <Text style={styles.refreshText}>Làm mới</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* 2. Time Range Selector */}
+      <View style={styles.timeRangeBar}>
+        <Calendar size={15} color="#64748B" />
+        <View style={styles.timeChipsWrapper}>
+          {[
+            { key: 'this_month', label: 'Tháng này' },
+            { key: 'last_month', label: 'Tháng trước' },
+            { key: 'all_time', label: 'Toàn bộ thời gian' },
+          ].map((item) => (
             <TouchableOpacity
-              activeOpacity={0.8}
-              style={[styles.scopeIconButton, { backgroundColor: scopeTint, borderColor: scopeBorder }]}
-              onPress={() => setShowDataScopeModal(true)}
+              key={item.key}
+              onPress={() => setTimeRange(item.key as TimeRangeKey)}
+              style={[
+                styles.timeChip,
+                timeRange === item.key && styles.timeChipActive,
+              ]}
+              activeOpacity={0.7}
             >
-              <Users
-                size={22}
-                color={scopeColor}
-                strokeWidth={2.2}
-              />
+              <Text
+                style={[
+                  styles.timeChipText,
+                  timeRange === item.key && styles.timeChipTextActive,
+                ]}
+              >
+                {item.label}
+              </Text>
             </TouchableOpacity>
-            <Text style={[styles.scopeLabel, { color: scopeColor }]}>
-              {dataScope === 'personal' ? 'Cá nhân' : 'Gia đình'}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.toggleWrap}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={[styles.toggleButton, statMode === 'expense' && { backgroundColor: scopeColor }]}
-            onPress={() => setStatMode('expense')}
-          >
-            <Text style={[styles.toggleText, statMode === 'expense' && styles.toggleTextActive]}>
-              Chi tiêu
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={[styles.toggleButton, statMode === 'income' && { backgroundColor: scopeColor }]}
-            onPress={() => setStatMode('income')}
-          >
-            <Text style={[styles.toggleText, statMode === 'income' && styles.toggleTextActive]}>
-              Thu nhập
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.legendRow}>
-          <View style={styles.legendItem}>
-            <CircleDot size={12} color="#058A42" fill="#058A42" />
-            <Text style={styles.legendText}>Đúng kế hoạch</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <CircleDot size={12} color="#E11D48" fill="#E11D48" />
-            <Text style={styles.legendText}>Vượt kế hoạch</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <CircleDot size={12} color="#F59E0B" fill="#F59E0B" />
-            <Text style={styles.legendText}>Còn lại</Text>
-          </View>
-        </View>
-
-        <View style={[styles.chartCard, { borderColor: scopeBorder }]}>
-          <View style={styles.chartGrid}>
-            {chartRows.map((row) => (
-              <View key={row} style={styles.gridRow}>
-                {chartCols.map((col) => (
-                  <View key={`${row}-${col}`} style={styles.gridCell} />
-                ))}
-              </View>
-            ))}
-
-            <View style={styles.chartAxisRow}>
-              {[100, 80, 60, 40, 20, 0].map((value) => (
-                <Text key={value} style={styles.yAxisLabel}>{value}</Text>
-              ))}
-            </View>
-
-            <View style={[styles.chartBaseline, { backgroundColor: scopeColor }]} />
-            <View style={[styles.chartArea, { backgroundColor: dataScope === 'personal' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(217, 70, 143, 0.10)' }]} />
-          </View>
-
-          <View style={styles.xAxisRow}>
-            {[1, 8, 16, 24, 31].map((day) => (
-              <Text key={day} style={styles.xAxisLabel}>{day}</Text>
-            ))}
-          </View>
-
-          <View style={styles.totalRow}>
-            <Text style={[styles.totalLabel, { color: statMode === 'expense' ? '#111827' : scopeColor }]}>{totalLabel}</Text>
-            <Text style={[styles.totalValue, { color: statMode === 'expense' ? '#111827' : scopeColor }]}>{totalValueLabel}</Text>
-          </View>
-        </View>
-
-        <View style={styles.categoryList}>
-          {categories.map(({ name, subtitle, amount, icon: Icon, iconColor, bgColor }) => (
-            <View key={`${dataScope}-${statMode}-${name}`} style={styles.categoryItem}>
-              <View style={styles.categoryLeft}>
-                <View style={[styles.categoryIcon, { backgroundColor: bgColor }]}>
-                  <Icon size={22} color={iconColor} strokeWidth={2.2} />
-                </View>
-                <View style={styles.categoryTextWrap}>
-                  <Text style={styles.categoryName}>{name}</Text>
-                  <Text style={styles.categorySub}>{subtitle}</Text>
-                </View>
-              </View>
-              <Text style={styles.categoryAmount}>{amount.toLocaleString('vi-VN')}</Text>
-            </View>
           ))}
         </View>
+      </View>
 
-        <View style={styles.footerActionRow}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={[styles.footerAction, { backgroundColor: scopeColor }]}
-          >
-            <CalendarDays size={18} color="#FFFFFF" strokeWidth={2.2} />
-            <Text style={styles.footerActionText}>Xem lịch</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-
-      <Modal
-        transparent
-        visible={showDataScopeModal}
-        animationType="fade"
-        onRequestClose={() => setShowDataScopeModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity
-            activeOpacity={1}
-            style={styles.modalBackdrop}
-            onPress={() => setShowDataScopeModal(false)}
-          />
-
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Không gian dữ liệu</Text>
-            <Text style={styles.modalSubtitle}>
-              Đang dùng dữ liệu {dataScope === 'family' ? 'Gia đình' : 'Cá nhân'}
-            </Text>
-
-            <TouchableOpacity
-              activeOpacity={0.9}
-              style={[styles.modalMemberCard, dataScope === 'personal' && { backgroundColor: scopeTint, borderColor: scopeBorder }]}
-              onPress={() => {
-                setDataScope('personal');
-                setShowDataScopeModal(false);
-              }}
-            >
-              <View style={styles.modalAvatar}>
-                <Text style={styles.modalAvatarText}>C</Text>
-              </View>
-              <View style={styles.modalMemberInfo}>
-                <Text style={styles.modalMemberTitle}>Cá nhân</Text>
-                <Text style={styles.modalMemberSubtitle}>Chỉ mình bạn thấy và sử dụng</Text>
-              </View>
-              {dataScope === 'personal' && <Text style={[styles.modalCheck, { color: scopeColor }]}>✓</Text>}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              activeOpacity={0.9}
-              style={[styles.modalMemberCard, dataScope === 'family' && { backgroundColor: scopeTint, borderColor: scopeBorder }]}
-              onPress={() => {
-                setDataScope('family');
-                setShowDataScopeModal(false);
-              }}
-            >
-              <View style={styles.modalAvatar}>
-                <Text style={styles.modalAvatarText}>G</Text>
-              </View>
-              <View style={styles.modalMemberInfo}>
-                <Text style={styles.modalMemberTitle}>Gia đình</Text>
-                <Text style={styles.modalMemberSubtitle}>Mọi thành viên cùng sử dụng</Text>
-              </View>
-              {dataScope === 'family' && <Text style={[styles.modalCheck, { color: scopeColor }]}>✓</Text>}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              activeOpacity={0.8}
-              style={styles.modalCloseButton}
-              onPress={() => setShowDataScopeModal(false)}
-            >
-              <Text style={styles.modalCloseText}>Đóng</Text>
-            </TouchableOpacity>
+      {/* 3. Summary Overview Cards */}
+      <View style={styles.summaryGrid}>
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryCardHeader}>
+            <Text style={styles.summaryCardLabel}>Tổng thu</Text>
+            <View style={[styles.summaryIconBox, { backgroundColor: '#DCFCE7' }]}>
+              <ArrowDownLeft size={16} color="#16A34A" strokeWidth={2.5} />
+            </View>
           </View>
+          <Text style={[styles.summaryAmount, { color: '#16A34A' }]}>
+            +{formatMoney(summary.total_income)} đ
+          </Text>
         </View>
-      </Modal>
-    </>
+
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryCardHeader}>
+            <Text style={styles.summaryCardLabel}>Tổng chi</Text>
+            <View style={[styles.summaryIconBox, { backgroundColor: '#FEE2E2' }]}>
+              <ArrowUpRight size={16} color="#DC2626" strokeWidth={2.5} />
+            </View>
+          </View>
+          <Text style={[styles.summaryAmount, { color: '#DC2626' }]}>
+            -{formatMoney(summary.total_expense)} đ
+          </Text>
+        </View>
+      </View>
+
+      {/* Net Income Banner */}
+      <View style={styles.netBanner}>
+        <View style={styles.netLeft}>
+          <Text style={styles.netLabel}>Số dư ròng (Thu - Chi)</Text>
+          <Text
+            style={[
+              styles.netAmount,
+              { color: summary.net_income >= 0 ? '#056839' : '#DC2626' },
+            ]}
+          >
+            {summary.net_income >= 0 ? '+' : ''}
+            {formatMoney(summary.net_income)} đ
+          </Text>
+        </View>
+        <View style={styles.countBadge}>
+          <Text style={styles.countText}>{summary.transaction_count} giao dịch</Text>
+        </View>
+      </View>
+
+      {/* 4. Tab Mode Toggle: Chi tiêu vs Thu nhập */}
+      <View style={styles.toggleWrap}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          style={[styles.toggleBtn, statMode === 'expense' && styles.toggleBtnActiveExpense]}
+          onPress={() => setStatMode('expense')}
+        >
+          <Text style={[styles.toggleText, statMode === 'expense' && styles.toggleTextActive]}>
+            💸 Chi tiêu ({categories.length} mục)
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          activeOpacity={0.8}
+          style={[styles.toggleBtn, statMode === 'income' && styles.toggleBtnActiveIncome]}
+          onPress={() => setStatMode('income')}
+        >
+          <Text style={[styles.toggleText, statMode === 'income' && styles.toggleTextActive]}>
+            💰 Thu nhập ({statMode === 'income' ? categories.length : statsData?.by_income_category?.length || 0} mục)
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Error notification if any */}
+      {errorMsg && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorText}>⚠️ {errorMsg}</Text>
+        </View>
+      )}
+
+      {/* Loading state */}
+      {loading ? (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="large" color="#056839" />
+          <Text style={styles.loadingText}>Đang tải thống kê từ MongoDB Atlas...</Text>
+        </View>
+      ) : summary.transaction_count === 0 ? (
+        /* Empty State */
+        <View style={styles.emptyCard}>
+          <PieChart size={48} color="#94A3B8" />
+          <Text style={styles.emptyTitle}>Chưa có giao dịch thực tế</Text>
+          <Text style={styles.emptyDesc}>
+            Dữ liệu thống kê được tính toán trực tiếp 100% từ cơ sở dữ liệu MongoDB Atlas. Hãy thực hiện thêm khoản thu chi đầu tiên để thấy báo cáo phân tích tại đây!
+          </Text>
+        </View>
+      ) : (
+        <>
+          {/* 5. Breakdown Progress Overview */}
+          {breakdown.length > 0 && (
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Diễn biến theo chu kỳ</Text>
+                <Text style={styles.sectionSub}>Ghi nhận từ Atlas</Text>
+              </View>
+
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.breakdownRow}>
+                {breakdown.map((item, idx) => (
+                  <View key={idx} style={styles.breakdownCol}>
+                    <Text style={styles.breakdownPeriod}>{item.period}</Text>
+                    <View style={styles.breakdownBarGroup}>
+                      <View
+                        style={[
+                          styles.barSegment,
+                          {
+                            height: Math.min(
+                              70,
+                              Math.max(10, (item.income / (summary.total_income || 1)) * 70)
+                            ),
+                            backgroundColor: '#16A34A',
+                          },
+                        ]}
+                      />
+                      <View
+                        style={[
+                          styles.barSegment,
+                          {
+                            height: Math.min(
+                              70,
+                              Math.max(10, (item.expense / (summary.total_expense || 1)) * 70)
+                            ),
+                            backgroundColor: '#EA580C',
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.breakdownCount}>{item.count} GD</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* 6. Danh sách phân bổ theo danh mục (Category Breakdown) */}
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>
+                {statMode === 'expense' ? 'Cơ cấu chi tiêu' : 'Cơ cấu thu nhập'}
+              </Text>
+              <Text style={styles.sectionSub}>
+                Tổng: {formatMoney(totalValue)} đ
+              </Text>
+            </View>
+
+            {categories.length === 0 ? (
+              <View style={styles.emptyCategoryBox}>
+                <Text style={styles.emptyCategoryText}>
+                  Chưa có giao dịch {statMode === 'expense' ? 'chi tiêu' : 'thu nhập'} nào trong kỳ này.
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.categoryList}>
+                {categories.map((cat, idx) => {
+                  const barColor = cat.category_color || (statMode === 'expense' ? '#EA580C' : '#056839');
+                  return (
+                    <View key={cat.category_id || idx} style={styles.catItem}>
+                      <View style={styles.catTopRow}>
+                        <View style={styles.catNameRow}>
+                          <View style={[styles.catColorDot, { backgroundColor: barColor }]} />
+                          <Text style={styles.catName}>{cat.category_name}</Text>
+                          <Text style={styles.catCount}>({cat.count} lần)</Text>
+                        </View>
+                        <View style={styles.catAmountRow}>
+                          <Text style={styles.catAmount}>{formatMoney(cat.total)} đ</Text>
+                          <Text style={styles.catPercentage}>{cat.percentage}%</Text>
+                        </View>
+                      </View>
+
+                      {/* Percentage Bar */}
+                      <View style={styles.percentBarBg}>
+                        <View
+                          style={[
+                            styles.percentBarFill,
+                            {
+                              width: `${Math.min(100, Math.max(2, cat.percentage))}%`,
+                              backgroundColor: barColor,
+                            },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+        </>
+      )}
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F8FAFC',
   },
   content: {
-    paddingHorizontal: 16,
-    paddingTop: 18,
-    paddingBottom: 120,
+    padding: 16,
+    paddingBottom: 110,
+    gap: 14,
   },
   headerRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  scopeIconButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#EAF7F0',
-    borderWidth: 1,
-    borderColor: '#CDEAD9',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 6,
-  },
-  scopeControl: {
-    alignItems: 'center',
-    minWidth: 58,
-  },
-  scopeLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    marginTop: 3,
   },
   title: {
-    fontSize: 34,
-    fontWeight: '700',
-    color: '#2b1d13',
-    letterSpacing: -0.7,
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#0F172A',
+    letterSpacing: -0.5,
   },
-  range: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#7b6a59',
+  liveBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     marginTop: 4,
   },
-  memberControls: {
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#10B981',
+  },
+  liveText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#056839',
+  },
+  refreshBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginTop: 8,
-  },
-  filterButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#E5E7EB',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  filterButtonText: {
-    fontSize: 20,
-    color: '#5B3A28',
-    fontWeight: '700',
-  },
-  memberBadge: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#F5F5F4',
+    gap: 6,
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#D6D3D1',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  memberBadgeText: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#1F2937',
-  },
-  switchWrap: {
-    flexDirection: 'row',
-    backgroundColor: '#E5E7EB',
-    borderRadius: 22,
-    padding: 6,
-    marginBottom: 12,
-  },
-  switchButton: {
-    flex: 1,
-    borderRadius: 16,
-    paddingVertical: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  switchButtonActive: {
-    backgroundColor: '#056839',
-  },
-  switchText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#4B5563',
-  },
-  switchTextActive: {
-    color: '#FFFFFF',
-  },
-  toggleWrap: {
-    flexDirection: 'row',
-    backgroundColor: '#E5E7EB',
-    borderRadius: 22,
-    padding: 6,
-    marginBottom: 12,
-  },
-  toggleButton: {
-    flex: 1,
-    borderRadius: 16,
-    paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  toggleButtonActive: {
-    backgroundColor: '#056839',
-  },
-  toggleText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#4B5563',
-  },
-  toggleTextActive: {
-    color: '#FFFFFF',
-  },
-  legendRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 4,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    flexShrink: 1,
-  },
-  legendText: {
-    fontSize: 11,
-    color: '#5B6575',
-    fontWeight: '600',
-  },
-  chartCard: {
-    backgroundColor: '#F5F5F4',
-    borderRadius: 18,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#D7DCE3',
-    overflow: 'hidden',
-  },
-  chartCardIncome: {
     borderColor: '#A7F3D0',
   },
-  chartGrid: {
-    position: 'relative',
-    height: 180,
-    borderWidth: 1,
-    borderColor: '#C7D2D9',
-    borderTopWidth: 0,
-    borderRightWidth: 0,
-    backgroundColor: '#F1F5F9',
-  },
-  gridRow: {
-    flex: 1,
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#C8D0D8',
-  },
-  gridCell: {
-    flex: 1,
-    borderRightWidth: 1,
-    borderRightColor: '#C8D0D8',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  chartAxisRow: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 28,
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-  },
-  yAxisLabel: {
-    fontSize: 11,
-    color: '#64748B',
-    fontWeight: '700',
-  },
-  chartBaseline: {
-    position: 'absolute',
-    left: 30,
-    right: 0,
-    bottom: 0,
-    height: 2,
-    backgroundColor: '#059669',
-  },
-  chartArea: {
-    position: 'absolute',
-    left: 30,
-    right: 0,
-    bottom: 0,
-    top: 10,
-    backgroundColor: 'rgba(16, 185, 129, 0.08)',
-  },
-  xAxisRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingLeft: 32,
-    paddingTop: 10,
-    paddingBottom: 4,
-  },
-  xAxisLabel: {
+  refreshText: {
     fontSize: 12,
+    fontWeight: '700',
+    color: '#056839',
+  },
+  timeRangeBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 8,
+  },
+  timeChipsWrapper: {
+    flexDirection: 'row',
+    gap: 6,
+    flex: 1,
+  },
+  timeChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+  },
+  timeChipActive: {
+    backgroundColor: '#056839',
+  },
+  timeChipText: {
+    fontSize: 12,
+    fontWeight: '600',
     color: '#64748B',
+  },
+  timeChipTextActive: {
+    color: '#FFFFFF',
     fontWeight: '700',
   },
-  totalRow: {
+  summaryGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 12,
+  },
+  summaryCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  summaryCardHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 6,
-    paddingTop: 8,
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
-  totalLabel: {
-    fontSize: 16,
+  summaryCardLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  summaryIconBox: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  summaryAmount: {
+    fontSize: 17,
     fontWeight: '800',
-    color: '#5B3A28',
   },
-  totalLabelIncome: {
-    color: '#056839',
-  },
-  totalValue: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#DC2626',
-  },
-  totalValueIncome: {
-    color: '#056839',
-  },
-  categoryList: {
-    marginTop: 18,
-  },
-  categoryItem: {
+  netBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    borderRadius: 20,
+    padding: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    padding: 12,
-    marginBottom: 10,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  categoryLeft: {
+  netLeft: {
+    gap: 4,
+  },
+  netLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  netAmount: {
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  countBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+  },
+  countText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  toggleWrap: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
+    backgroundColor: '#F1F5F9',
+    padding: 4,
+    borderRadius: 16,
+    gap: 8,
   },
-  categoryIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+  toggleBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 12,
+  },
+  toggleBtnActiveExpense: {
+    backgroundColor: '#EA580C',
+    shadowColor: '#EA580C',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  toggleBtnActiveIncome: {
+    backgroundColor: '#056839',
+    shadowColor: '#056839',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  toggleText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  toggleTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 14,
+    padding: 12,
+  },
+  errorText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#DC2626',
+  },
+  loadingBox: {
+    padding: 48,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 12,
   },
-  categoryTextWrap: {
-    flexShrink: 1,
-  },
-  categoryName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1F2937',
-  },
-  categorySub: {
-    fontSize: 12,
+  loadingText: {
+    fontSize: 13,
+    fontWeight: '600',
     color: '#64748B',
-    marginTop: 2,
   },
-  categoryAmount: {
-    fontSize: 18,
-    fontWeight: '700',
+  emptyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  emptyTitle: {
+    fontSize: 17,
+    fontWeight: '800',
     color: '#0F172A',
   },
-  footerActionRow: {
-    marginTop: 8,
-    alignItems: 'flex-end',
+  emptyDesc: {
+    fontSize: 13,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 20,
+    maxWidth: 300,
   },
-  footerAction: {
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+    gap: 14,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  sectionSub: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#056839',
+  },
+  breakdownRow: {
+    gap: 16,
+    paddingVertical: 8,
+  },
+  breakdownCol: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  breakdownPeriod: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  breakdownBarGroup: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 4,
+    height: 70,
+    width: 28,
+    justifyContent: 'center',
+  },
+  barSegment: {
+    width: 10,
+    borderRadius: 5,
+  },
+  breakdownCount: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
+  categoryList: {
+    gap: 12,
+  },
+  catItem: {
+    gap: 6,
+  },
+  catTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  catNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#056839',
-    borderRadius: 16,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
   },
-  footerActionText: {
-    fontSize: 14,
-    color: '#FFFFFF',
+  catColorDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  catName: {
+    fontSize: 13.5,
     fontWeight: '700',
+    color: '#1E293B',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+  catCount: {
+    fontSize: 11.5,
+    color: '#94A3B8',
   },
-  modalBackdrop: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  modalCard: {
-    width: '100%',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 26,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    zIndex: 1,
-  },
-  modalTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#1F2937',
-    textAlign: 'center',
-  },
-  modalSubtitle: {
-    fontSize: 15,
-    color: '#5B6575',
-    textAlign: 'center',
-    marginTop: 10,
-    marginBottom: 18,
-  },
-  modalOptionRow: {
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  modalOptionPill: {
-    backgroundColor: '#E5E7EB',
-    borderRadius: 18,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-  },
-  modalOptionText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1F2937',
-  },
-  modalInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 18,
-  },
-  modalInfoLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#5B6575',
-    letterSpacing: 0.8,
-  },
-  modalInfoAction: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#5B3A28',
-  },
-  modalMemberCard: {
+  catAmountRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 18,
-    padding: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    gap: 8,
   },
-  modalMemberCardSelected: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E9F3F0',
-    borderRadius: 18,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#B6D7CB',
-  },
-  modalAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#F7E6A3',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  modalAvatarText: {
-    fontSize: 15,
+  catAmount: {
+    fontSize: 13.5,
     fontWeight: '800',
-    color: '#5B3A28',
+    color: '#0F172A',
   },
-  modalMemberInfo: {
-    flex: 1,
-  },
-  modalMemberTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#1F2937',
-  },
-  modalMemberSubtitle: {
+  catPercentage: {
     fontSize: 12,
-    color: '#5B6575',
-    marginTop: 2,
+    fontWeight: '700',
+    color: '#64748B',
+    minWidth: 40,
+    textAlign: 'right',
   },
-  modalCheck: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#1F9D5A',
+  percentBarBg: {
+    height: 7,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 4,
+    overflow: 'hidden',
   },
-  modalCloseButton: {
-    marginTop: 18,
-    backgroundColor: '#5B3A28',
-    borderRadius: 18,
-    paddingVertical: 14,
+  percentBarFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  emptyCategoryBox: {
+    padding: 24,
     alignItems: 'center',
   },
-  modalCloseText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '800',
+  emptyCategoryText: {
+    fontSize: 13,
+    color: '#94A3B8',
   },
 });

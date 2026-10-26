@@ -10,6 +10,7 @@ import accountRoutes from './routes/accounts.js';
 import categoryRoutes from './routes/categories.js';
 import transactionRoutes from './routes/transactions.js';
 import householdRoutes from './routes/households.js';
+import taskRoutes from './routes/tasks.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -43,6 +44,7 @@ app.get('/', (req, res) => {
       'categories',
       'transactions',
       'transaction_transfers',
+      'tasks',
     ],
   });
 });
@@ -57,6 +59,7 @@ app.use('/api/accounts', accountRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/households', householdRoutes);
+app.use('/api/tasks', taskRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

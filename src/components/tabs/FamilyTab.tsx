@@ -112,13 +112,13 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
           <Text style={styles.infoTitle}>Phân quyền theo vai trò trong gia đình</Text>
         </View>
         <Text style={styles.infoBullet}>
-          • <Text style={{ fontWeight: '800', color: '#056839' }}>Chủ Hộ Gia Đình (Bố Minh)</Text>: Toàn quyền quản lý ví, thêm/sửa/xóa ví, nạp quỹ, chuyển tiền, cài đặt hạn mức, mời người thân và xem sao kê.
+          • <Text style={{ fontWeight: '800', color: '#056839' }}>Chủ Hộ Gia Đình</Text>: Toàn quyền quản lý ví, thêm/sửa/xóa ví, nạp quỹ, chuyển tiền, cài đặt hạn mức, mời người thân và xem sao kê.
         </Text>
         <Text style={styles.infoBullet}>
-          • <Text style={{ fontWeight: '800', color: '#2563EB' }}>Thành Viên Gia Đình (Mẹ Lan)</Text>: Được xem ví, tạo thu chi, thực hiện chuyển tiền nếu được cấp quyền. Không quản lý ví hay phân quyền.
+          • <Text style={{ fontWeight: '800', color: '#2563EB' }}>Thành Viên Gia Đình</Text>: Được xem ví, tạo thu chi, thực hiện chuyển tiền nếu được cấp quyền. Không quản lý ví hay phân quyền.
         </Text>
         <Text style={styles.infoBullet}>
-          • <Text style={{ fontWeight: '800', color: '#D97706' }}>Trẻ Em (Bé Bi)</Text>: Chỉ xem thông tin ví và sao kê. Không thể tạo hay chỉnh sửa bất kỳ ví hay giao dịch nào.
+          • <Text style={{ fontWeight: '800', color: '#D97706' }}>Trẻ Em</Text>: Chỉ xem thông tin ví và sao kê. Không thể tạo hay chỉnh sửa bất kỳ ví hay giao dịch nào.
         </Text>
       </View>
     </ScrollView>

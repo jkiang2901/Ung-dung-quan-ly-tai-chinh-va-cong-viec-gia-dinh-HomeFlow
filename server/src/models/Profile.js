@@ -30,6 +30,11 @@ const profileSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    phone: {
+      type: String,
+      default: null,
+      trim: true,
+    },
     timezone: {
       type: String,
       default: 'Asia/Ho_Chi_Minh',
