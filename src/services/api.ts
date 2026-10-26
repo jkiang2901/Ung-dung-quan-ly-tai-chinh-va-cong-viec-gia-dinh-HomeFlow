@@ -53,20 +53,30 @@ export const mapBackendAccountToWallet = (acc: any, ownerName: string = 'Tôi'):
   };
 };
 
-export const mapBackendTransactionToUi = (t: any): Transaction => {
+export const mapBackendTransactionToUi = (t: any, userName: string = 'Tôi'): Transaction => {
+  const isTransfer = Boolean(t.is_transfer);
+  let uiType: 'expense' | 'income' | 'transfer' | 'contribution' = t.type === 'expense' ? 'expense' : 'income';
+  if (isTransfer) {
+    uiType = 'transfer';
+  } else if (t.category_name && t.category_name.toLowerCase().includes('đóng góp')) {
+    uiType = 'contribution';
+  }
+
   return {
     id: t.id,
-    title: t.note || (t.type === 'expense' ? 'Khoản chi tiêu' : 'Khoản thu nhập'),
-    user: t.user_id ? 'Thành viên' : 'Tôi',
+    title: t.note || (isTransfer ? 'Chuyển tiền nội bộ' : (t.type === 'expense' ? 'Khoản chi tiêu' : 'Khoản thu nhập')),
+    user: t.user_name || (t.user_id ? userName : 'Tôi'),
     userId: t.user_id,
     time: t.transaction_date ? new Date(t.transaction_date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : 'Vừa xong',
     date: t.transaction_date ? new Date(t.transaction_date).toLocaleDateString('vi-VN') : undefined,
     amount: t.type === 'expense' ? -Math.abs(t.amount) : Math.abs(t.amount),
-    type: t.type === 'expense' ? 'expense' : 'income',
-    category: t.category_name || (t.type === 'expense' ? 'Chi tiêu' : 'Thu nhập'),
-    iconType: t.type === 'expense' ? 'shopping' : 'salary',
+    type: uiType,
+    category: t.category_name || (isTransfer ? 'Chuyển ví' : (t.type === 'expense' ? 'Chi tiêu' : 'Thu nhập')),
+    iconType: isTransfer ? 'transfer' : (t.type === 'expense' ? 'shopping' : 'salary'),
     sourceWalletId: t.account_id,
     sourceWalletName: t.account_name,
+    destinationWalletId: t.destination_account_id,
+    destinationWalletName: t.destination_account_name,
     note: t.note,
   };
 };
@@ -171,7 +181,7 @@ class ApiService {
 
   // --- 1. AUTH API ---
   auth = {
-    register: (payload: { email: string; password: string; display_name: string; avatar_url?: string; timezone?: string }) =>
+    register: (payload: { email: string; password: string; display_name: string; avatar_url?: string; phone?: string; timezone?: string }) =>
       this.request<{ success: boolean; token: string; user: any }>('/auth/register', {
         method: 'POST',
         body: JSON.stringify(payload),
@@ -185,7 +195,7 @@ class ApiService {
 
     getProfile: () => this.request<{ success: boolean; user: any }>('/auth/me'),
 
-    updateProfile: (payload: { display_name?: string; avatar_url?: string | null; timezone?: string }) =>
+    updateProfile: (payload: { display_name?: string; avatar_url?: string | null; phone?: string | null; timezone?: string }) =>
       this.request<{ success: boolean; message: string; user: any }>('/auth/profile', {
         method: 'PUT',
         body: JSON.stringify(payload),
@@ -356,6 +366,44 @@ class ApiService {
         }
       ),
   };
+
+  // --- 6. VIỆC NHÀ (TASKS) API (MongoDB Atlas) ---
+  tasks = {
+    list: () => this.request<{ success: boolean; data: any[] }>('/tasks'),
+    create: (payload: {
+      title: string;
+      time?: string;
+      amount?: number;
+      assigned_to?: string;
+      avatar_url?: string;
+      tag?: string;
+      priority?: boolean;
+    }) =>
+      this.request<{ success: boolean; message: string; data: any }>('/tasks', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    toggle: (id: string) =>
+      this.request<{ success: boolean; message: string; data: any }>(`/tasks/${id}/toggle`, {
+        method: 'PUT',
+      }),
+    delete: (id: string) =>
+      this.request<{ success: boolean; message: string }>(`/tasks/${id}`, {
+        method: 'DELETE',
+      }),
+  };
 }
+
+export const mapBackendTaskToUi = (t: any): import('../types').HouseholdTask => ({
+  id: t.id,
+  title: t.title,
+  time: t.time || '',
+  amount: t.amount || 0,
+  assignedTo: t.assigned_to || 'Tôi',
+  avatarUrl: t.avatar_url || '',
+  tag: t.tag || 'Gia đình',
+  priority: Boolean(t.priority),
+  completed: Boolean(t.completed),
+});
 
 export const api = new ApiService();

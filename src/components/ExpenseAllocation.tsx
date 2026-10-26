@@ -1,11 +1,53 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { MONTHLY_EXPENSES, WEEKLY_EXPENSES } from '../mockData';
+import type { Transaction } from '../types';
 
-export const ExpenseAllocation: React.FC = () => {
+interface ExpenseAllocationProps {
+  transactions?: Transaction[];
+}
+
+const CATEGORY_COLORS: Record<string, string> = {
+  'Ăn uống': '#F97316',
+  'Ăn uống gia đình': '#F97316',
+  'Đi chợ/Siêu thị': '#10B981',
+  'Học phí & Con cái': '#06B6D4',
+  'Hóa đơn điện nước': '#6366F1',
+  'Di chuyển/Xăng xe': '#EC4899',
+  'Mua sắm': '#8B5CF6',
+  'Y tế/Thuốc': '#EF4444',
+  'Giải trí': '#F59E0B',
+};
+
+const DEFAULT_COLORS = ['#F97316', '#10B981', '#06B6D4', '#6366F1', '#EC4899', '#8B5CF6', '#F59E0B'];
+
+export const ExpenseAllocation: React.FC<ExpenseAllocationProps> = ({ transactions = [] }) => {
   const [period, setPeriod] = useState<'month' | 'week'>('month');
-  const data = period === 'month' ? MONTHLY_EXPENSES : WEEKLY_EXPENSES;
+
+  const data = useMemo(() => {
+    const expenseTxs = transactions.filter((t) => t.type === 'expense');
+    if (expenseTxs.length === 0) return [];
+
+    const totalExpense = expenseTxs.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    if (totalExpense === 0) return [];
+
+    const catMap: Record<string, number> = {};
+    expenseTxs.forEach((t) => {
+      const cat = t.category || 'Chi tiêu khác';
+      catMap[cat] = (catMap[cat] || 0) + Math.abs(t.amount);
+    });
+
+    return Object.entries(catMap).map(([name, amount], index) => {
+      const percentage = Math.round((amount / totalExpense) * 100);
+      const color = CATEGORY_COLORS[name] || DEFAULT_COLORS[index % DEFAULT_COLORS.length];
+      return {
+        name,
+        amount,
+        percentage,
+        color,
+      };
+    }).sort((a, b) => b.amount - a.amount);
+  }, [transactions]);
 
   let cumulativePercent = 0;
   const radius = 40;
@@ -18,7 +60,7 @@ export const ExpenseAllocation: React.FC = () => {
         <View>
           <Text style={styles.title}>Phân bổ chi tiêu</Text>
           <Text style={styles.subtitle}>
-            {period === 'month' ? 'Tháng 10/2023' : 'Tuần này'}
+            {period === 'month' ? 'Tháng này' : 'Tuần này'}
           </Text>
         </View>
 
@@ -62,52 +104,58 @@ export const ExpenseAllocation: React.FC = () => {
       </View>
 
       {/* Main Grid: Chart Left, Legend Right */}
-      <View style={styles.body}>
-        {/* Left: Donut Chart */}
-        <View style={styles.chartWrapper}>
-          <Svg width={120} height={120} viewBox="0 0 100 100" style={{ transform: [{ rotate: '-90deg' }] }}>
-            {data.map((cat, idx) => {
-              const strokeDasharray = `${(cat.percentage / 100) * circumference} ${circumference}`;
-              const strokeDashoffset = -((cumulativePercent / 100) * circumference);
-              cumulativePercent += cat.percentage;
+      {data.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Chưa có chi tiêu nào được ghi nhận từ MongoDB Atlas.</Text>
+        </View>
+      ) : (
+        <View style={styles.body}>
+          {/* Left: Donut Chart */}
+          <View style={styles.chartWrapper}>
+            <Svg width={120} height={120} viewBox="0 0 100 100" style={{ transform: [{ rotate: '-90deg' }] }}>
+              {data.map((cat, idx) => {
+                const strokeDasharray = `${(cat.percentage / 100) * circumference} ${circumference}`;
+                const strokeDashoffset = -((cumulativePercent / 100) * circumference);
+                cumulativePercent += cat.percentage;
 
-              return (
-                <Circle
-                  key={idx}
-                  cx="50"
-                  cy="50"
-                  r={radius}
-                  fill="transparent"
-                  stroke={cat.color}
-                  strokeWidth={14}
-                  strokeDasharray={strokeDasharray}
-                  strokeDashoffset={strokeDashoffset}
-                />
-              );
-            })}
-          </Svg>
-          {/* Inner Donut Center Label */}
-          <View style={styles.chartCenter}>
-            <Text style={styles.centerSubtext}>Hạng mục</Text>
-            <Text style={styles.centerMainText}>{data.length} mục</Text>
+                return (
+                  <Circle
+                    key={idx}
+                    cx="50"
+                    cy="50"
+                    r={radius}
+                    fill="transparent"
+                    stroke={cat.color}
+                    strokeWidth={14}
+                    strokeDasharray={strokeDasharray}
+                    strokeDashoffset={strokeDashoffset}
+                  />
+                );
+              })}
+            </Svg>
+            {/* Inner Donut Center Label */}
+            <View style={styles.chartCenter}>
+              <Text style={styles.centerSubtext}>Hạng mục</Text>
+              <Text style={styles.centerMainText}>{data.length} mục</Text>
+            </View>
+          </View>
+
+          {/* Right: Legend Breakdown List */}
+          <View style={styles.legendList}>
+            {data.map((cat, idx) => (
+              <View key={idx} style={styles.legendItem}>
+                <View style={styles.legendLeft}>
+                  <View style={[styles.colorDot, { backgroundColor: cat.color }]} />
+                  <Text style={styles.legendName} numberOfLines={1}>
+                    {cat.name}
+                  </Text>
+                </View>
+                <Text style={styles.legendPercent}>{cat.percentage}%</Text>
+              </View>
+            ))}
           </View>
         </View>
-
-        {/* Right: Legend Breakdown List */}
-        <View style={styles.legendList}>
-          {data.map((cat, idx) => (
-            <View key={idx} style={styles.legendItem}>
-              <View style={styles.legendLeft}>
-                <View style={[styles.colorDot, { backgroundColor: cat.color }]} />
-                <Text style={styles.legendName} numberOfLines={1}>
-                  {cat.name}
-                </Text>
-              </View>
-              <Text style={styles.legendPercent}>{cat.percentage}%</Text>
-            </View>
-          ))}
-        </View>
-      </View>
+      )}
     </View>
   );
 };
@@ -177,6 +225,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
+  },
+  emptyContainer: {
+    paddingVertical: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontSize: 13,
+    color: '#94A3B8',
+    textAlign: 'center',
   },
   chartWrapper: {
     width: 120,

@@ -31,8 +31,13 @@ export const TodayTasks: React.FC<TodayTasksProps> = ({ tasks, onToggleTask, onV
 
       {/* Task List */}
       <View style={styles.taskList}>
-        {tasks.map((task) => (
-          <TouchableOpacity
+        {tasks.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>Hôm nay chưa có việc nhà nào cần làm.</Text>
+          </View>
+        ) : (
+          tasks.map((task) => (
+            <TouchableOpacity
             key={task.id}
             onPress={() => onToggleTask(task.id)}
             activeOpacity={0.8}
@@ -112,7 +117,8 @@ export const TodayTasks: React.FC<TodayTasksProps> = ({ tasks, onToggleTask, onV
               </View>
             )}
           </TouchableOpacity>
-        ))}
+        ))
+        )}
       </View>
     </View>
   );
@@ -272,5 +278,21 @@ const styles = StyleSheet.create({
   },
   tagTextNormal: {
     color: '#475569',
+  },
+  emptyContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    borderStyle: 'dashed',
+  },
+  emptyText: {
+    fontSize: 13,
+    color: '#94A3B8',
+    fontWeight: '500',
   },
 });

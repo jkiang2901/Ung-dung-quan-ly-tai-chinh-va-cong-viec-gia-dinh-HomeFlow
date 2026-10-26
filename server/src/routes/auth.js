@@ -18,7 +18,7 @@ const generateToken = (userId, email) => {
 // @desc    Đăng ký tài khoản mới (lưu vào bảng profiles)
 router.post('/register', async (req, res, next) => {
   try {
-    const { email, password, display_name, avatar_url, timezone } = req.body;
+    const { email, password, display_name, avatar_url, timezone, phone } = req.body;
 
     if (!email || !password || !display_name) {
       return res.status(400).json({
@@ -50,6 +50,7 @@ router.post('/register', async (req, res, next) => {
       password_hash,
       display_name: display_name.trim(),
       avatar_url: avatar_url || null,
+      phone: phone ? phone.trim() : null,
       timezone: timezone || 'Asia/Ho_Chi_Minh',
     });
 
@@ -131,7 +132,7 @@ router.put('/profile', requireAuth, async (req, res, next) => {
       });
     }
 
-    const { display_name, avatar_url, timezone } = req.body;
+    const { display_name, avatar_url, timezone, phone } = req.body;
     const updates = {};
 
     if (display_name !== undefined) {
@@ -160,6 +161,16 @@ router.put('/profile', requireAuth, async (req, res, next) => {
       updates.avatar_url = avatar_url;
     }
 
+    if (phone !== undefined) {
+      if (phone !== null && typeof phone !== 'string') {
+        return res.status(400).json({
+          success: false,
+          message: 'phone phải là chuỗi số điện thoại hoặc null.',
+        });
+      }
+      updates.phone = phone ? phone.trim() : null;
+    }
+
     if (timezone !== undefined) {
       if (typeof timezone !== 'string' || timezone.trim().length === 0) {
         return res.status(400).json({
@@ -173,7 +184,7 @@ router.put('/profile', requireAuth, async (req, res, next) => {
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Vui lòng cung cấp ít nhất một trường cần cập nhật: display_name, avatar_url, timezone.',
+        message: 'Vui lòng cung cấp ít nhất một trường cần cập nhật: display_name, avatar_url, phone, timezone.',
       });
     }
 

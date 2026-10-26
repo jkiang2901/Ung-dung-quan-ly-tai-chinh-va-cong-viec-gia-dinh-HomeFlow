@@ -42,25 +42,30 @@ export const WalletModal: React.FC<WalletModalProps> = ({
   onDeleteWallet,
   hasTransactions = false,
 }) => {
+  const availableOwners = members && members.length > 0
+    ? [...members.map((m) => m.name), 'Gia đình']
+    : ['Cá nhân', 'Gia đình'];
+  const defaultOwner = availableOwners[0];
+
   const [name, setName] = useState('');
   const [type, setType] = useState<WalletType>('Ngân hàng');
   const [initialBalance, setInitialBalance] = useState('');
-  const [ownerName, setOwnerName] = useState('Bố Minh');
+  const [ownerName, setOwnerName] = useState(defaultOwner);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (wallet && mode === 'edit') {
       setName(wallet.name);
       setType(wallet.type);
-      setOwnerName(wallet.ownerName || 'Bố Minh');
+      setOwnerName(wallet.ownerName || defaultOwner);
     } else {
       setName('');
       setType('Ngân hàng');
       setInitialBalance('');
-      setOwnerName('Bố Minh');
+      setOwnerName(defaultOwner);
     }
     setError(null);
-  }, [wallet, mode, visible]);
+  }, [wallet, mode, visible, defaultOwner]);
 
   if (!visible || !mode) return null;
 
@@ -248,7 +253,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                     <View style={styles.fieldGroup}>
                       <Text style={styles.label}>Chủ sở hữu</Text>
                       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-                        {['Bố Minh', 'Mẹ Lan', 'Gia đình'].map((m) => (
+                        {availableOwners.map((m) => (
                           <TouchableOpacity
                             key={m}
                             onPress={() => setOwnerName(m)}

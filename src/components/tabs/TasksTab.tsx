@@ -28,56 +28,8 @@ export const TasksTab: React.FC<TasksTabProps> = ({
   onToggleTask,
   onAddTask,
 }) => {
-  const todayTasks: HouseholdTask[] = [
-    {
-      id: 'today-1',
-      title: 'Lau dọn phòng khách',
-      time: '10:15',
-      assignedTo: 'Bé Bi',
-      avatarUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=150',
-      tag: 'Nhà cửa',
-      priority: true,
-      completed: true,
-    },
-    {
-      id: 'today-2',
-      title: 'Đi siêu thị mua thực phẩm',
-      time: '17:30 chiều',
-      assignedTo: 'Bố Minh',
-      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150',
-      tag: 'Cần thiết',
-      priority: false,
-      completed: false,
-    },
-  ];
-
-  const upcomingTasks: HouseholdTask[] = [
-    {
-      id: 'up-1',
-      title: 'Bảo dưỡng điều hòa & lọc nước',
-      time: 'Thứ 7',
-      assignedTo: 'Bố Minh',
-      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150',
-      tag: 'Gia dụng',
-      priority: false,
-      completed: false,
-    },
-    {
-      id: 'up-2',
-      title: 'Đóng bảo hiểm sức khỏe gia đình',
-      time: '15/11',
-      assignedTo: 'Mẹ Lan',
-      avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150',
-      tag: 'Tài chính',
-      priority: false,
-      completed: false,
-    },
-  ];
-
-  const [localTodayTasks, setLocalTodayTasks] = useState<HouseholdTask[]>(() =>
-    tasks.length > 0 ? tasks : todayTasks
-  );
-  const [localUpcomingTasks, setLocalUpcomingTasks] = useState<HouseholdTask[]>(upcomingTasks);
+  const [localTodayTasks, setLocalTodayTasks] = useState<HouseholdTask[]>(tasks || []);
+  const [localUpcomingTasks, setLocalUpcomingTasks] = useState<HouseholdTask[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -85,7 +37,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
   const [selectedTime, setSelectedTime] = useState(new Date());
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskTime, setNewTaskTime] = useState('');
-  const [selectedMember, setSelectedMember] = useState(members[0]?.name || 'Bố Minh');
+  const [selectedMember, setSelectedMember] = useState(members[0]?.name || 'Tôi');
   const [taskPriority, setTaskPriority] = useState(false);
 
   const isWeb = Platform.OS === 'web';
@@ -145,9 +97,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
   };
 
   useEffect(() => {
-    if (tasks.length > 0) {
-      setLocalTodayTasks(tasks);
-    }
+    setLocalTodayTasks(tasks || []);
   }, [tasks]);
 
   const toggleTodayTask = (id: string) => {
@@ -169,7 +119,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
       id: `task-${Date.now()}`,
       title: newTaskTitle.trim() || 'Công việc mới',
       time: newTaskTime || formatTaskTimeText(selectedDate, selectedTime),
-      assignedTo: member?.name || selectedMember,
+      assignedTo: member?.name || selectedMember || 'Tôi',
       avatarUrl: member?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150',
       tag: 'Gia đình',
       priority: taskPriority,
@@ -182,7 +132,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
     setNewTaskTime('');
     setSelectedDate(new Date());
     setSelectedTime(new Date());
-    setSelectedMember(members[0]?.name || 'Bố Minh');
+    setSelectedMember(members[0]?.name || 'Tôi');
     setTaskPriority(false);
     setShowCreateModal(false);
   };
@@ -204,86 +154,100 @@ export const TasksTab: React.FC<TasksTabProps> = ({
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Nhiệm vụ hôm nay</Text>
+        <Text style={styles.sectionTitle}>Nhiệm vụ hôm nay ({localTodayTasks.length})</Text>
         <View style={styles.taskList}>
-          {localTodayTasks.map((t) => (
-            <TouchableOpacity
-              key={t.id}
-              onPress={() => toggleTodayTask(t.id)}
-              activeOpacity={0.8}
-              style={[styles.taskCard, t.completed && styles.completedCard]}
-            >
-              <View style={styles.taskLeft}>
-                <TouchableOpacity onPress={() => toggleTodayTask(t.id)}>
-                  {t.completed ? (
-                    <CheckCircle2 size={24} color="#10B981" />
-                  ) : (
-                    <Circle size={24} color="#A5B4FC" strokeWidth={1.8} />
-                  )}
-                </TouchableOpacity>
-                <View style={styles.taskTextGroup}>
-                  <Text style={[styles.taskTitle, t.completed && styles.completedText]}>
-                    {t.title}
-                  </Text>
-                  <View style={styles.metaRow}>
-                    <Image source={{ uri: t.avatarUrl }} style={styles.avatar} />
-                    <Text style={styles.assigneeName}>{t.assignedTo}</Text>
-                    {t.time && (
-                      <View style={styles.timeBadge}>
-                        <Clock size={11} color="#EA580C" />
-                        <Text style={styles.timeText}>{t.time}</Text>
-                      </View>
+          {localTodayTasks.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyTitle}>Chưa có việc nhà nào hôm nay</Text>
+              <Text style={styles.emptySubtitle}>Bấm "+ Tạo việc" ở trên để phân công nhiệm vụ cho gia đình.</Text>
+            </View>
+          ) : (
+            localTodayTasks.map((t) => (
+              <TouchableOpacity
+                key={t.id}
+                onPress={() => toggleTodayTask(t.id)}
+                activeOpacity={0.8}
+                style={[styles.taskCard, t.completed && styles.completedCard]}
+              >
+                <View style={styles.taskLeft}>
+                  <TouchableOpacity onPress={() => toggleTodayTask(t.id)}>
+                    {t.completed ? (
+                      <CheckCircle2 size={24} color="#10B981" />
+                    ) : (
+                      <Circle size={24} color="#A5B4FC" strokeWidth={1.8} />
                     )}
+                  </TouchableOpacity>
+                  <View style={styles.taskTextGroup}>
+                    <Text style={[styles.taskTitle, t.completed && styles.completedText]}>
+                      {t.title}
+                    </Text>
+                    <View style={styles.metaRow}>
+                      <Image source={{ uri: t.avatarUrl }} style={styles.avatar} />
+                      <Text style={styles.assigneeName}>{t.assignedTo}</Text>
+                      {t.time && (
+                        <View style={styles.timeBadge}>
+                          <Clock size={11} color="#EA580C" />
+                          <Text style={styles.timeText}>{t.time}</Text>
+                        </View>
+                      )}
+                    </View>
                   </View>
                 </View>
-              </View>
 
-              {t.priority && (
-                <View style={styles.rewardBadge}>
-                  <Text style={styles.rewardText}>Ưu tiên</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          ))}
+                {t.priority && (
+                  <View style={styles.rewardBadge}>
+                    <Text style={styles.rewardText}>Ưu tiên</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))
+          )}
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Sắp tới</Text>
+        <Text style={styles.sectionTitle}>Sắp tới ({localUpcomingTasks.length})</Text>
         <View style={styles.taskList}>
-          {localUpcomingTasks.map((t) => (
-            <TouchableOpacity
-              key={t.id}
-              onPress={() => toggleUpcomingTask(t.id)}
-              activeOpacity={0.8}
-              style={[styles.taskCard, t.completed && styles.completedCard]}
-            >
-              <View style={styles.taskLeft}>
-                <TouchableOpacity onPress={() => toggleUpcomingTask(t.id)}>
-                  {t.completed ? (
-                    <CheckCircle2 size={24} color="#10B981" />
-                  ) : (
-                    <Circle size={24} color="#A5B4FC" strokeWidth={1.8} />
-                  )}
-                </TouchableOpacity>
-                <View style={styles.taskTextGroup}>
-                  <Text style={[styles.taskTitle, t.completed && styles.completedText]}>
-                    {t.title}
-                  </Text>
-                  <View style={styles.metaRow}>
-                    <Image source={{ uri: t.avatarUrl }} style={styles.avatar} />
-                    <Text style={styles.assigneeName}>{t.assignedTo}</Text>
+          {localUpcomingTasks.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyTitle}>Chưa có nhiệm vụ sắp tới</Text>
+              <Text style={styles.emptySubtitle}>Các nhiệm vụ lên lịch trong tương lai sẽ hiển thị tại đây.</Text>
+            </View>
+          ) : (
+            localUpcomingTasks.map((t) => (
+              <TouchableOpacity
+                key={t.id}
+                onPress={() => toggleUpcomingTask(t.id)}
+                activeOpacity={0.8}
+                style={[styles.taskCard, t.completed && styles.completedCard]}
+              >
+                <View style={styles.taskLeft}>
+                  <TouchableOpacity onPress={() => toggleUpcomingTask(t.id)}>
+                    {t.completed ? (
+                      <CheckCircle2 size={24} color="#10B981" />
+                    ) : (
+                      <Circle size={24} color="#A5B4FC" strokeWidth={1.8} />
+                    )}
+                  </TouchableOpacity>
+                  <View style={styles.taskTextGroup}>
+                    <Text style={[styles.taskTitle, t.completed && styles.completedText]}>
+                      {t.title}
+                    </Text>
+                    <View style={styles.metaRow}>
+                      <Image source={{ uri: t.avatarUrl }} style={styles.avatar} />
+                      <Text style={styles.assigneeName}>{t.assignedTo}</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
 
-              {t.tag && (
-                <View style={styles.tagBadge}>
-                  <Text style={styles.tagText}>{t.tag}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          ))}
+                {t.tag && (
+                  <View style={styles.tagBadge}>
+                    <Text style={styles.tagText}>{t.tag}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))
+          )}
         </View>
       </View>
 
@@ -702,5 +666,26 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '800',
+  },
+  emptyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    borderStyle: 'dashed',
+  },
+  emptyTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#64748B',
+    marginBottom: 4,
+  },
+  emptySubtitle: {
+    fontSize: 12,
+    color: '#94A3B8',
+    textAlign: 'center',
   },
 });

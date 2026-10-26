@@ -84,6 +84,7 @@ export interface AuthUser {
   roleLabel?: string;
   avatar: string;
   personalBalance: number;
+  timezone?: string;
 }
 
 export interface FamilyInvitation {

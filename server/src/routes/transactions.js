@@ -458,7 +458,7 @@ router.get('/:id', requireAuth, async (req, res, next) => {
 // =============================================================================
 router.post('/', requireAuth, async (req, res, next) => {
   try {
-    const { account_id, category_id, amount, type, note, transaction_date } = req.body;
+    const { account_id, category_id, category: category_name_field, category_name, amount, type, note, transaction_date } = req.body;
 
     if (!account_id || amount === undefined || amount === null || !type) {
       return res.status(400).json({
@@ -490,14 +490,25 @@ router.post('/', requireAuth, async (req, res, next) => {
       });
     }
 
-    if (category_id) {
-      const category = await Category.findOne({ id: category_id });
+    let finalCategoryId = null;
+    const catInput = category_id || category_name || category_name_field;
+    if (catInput) {
+      let category = await Category.findOne({ id: catInput });
       if (!category) {
-        return res.status(400).json({
-          success: false,
-          message: 'Danh mục (category_id) không tồn tại trong hệ thống.',
+        category = await Category.findOne({ name: catInput });
+      }
+      if (!category) {
+        // Tạo mới danh mục nếu chưa có
+        category = await Category.create({
+          name: catInput,
+          type: type,
+          owner_user_id: req.user.id,
+          household_id: account.household_id || null,
+          icon: type === 'income' ? 'trending-up' : 'shopping-bag',
+          color: type === 'income' ? '#10b981' : '#f59e0b',
         });
       }
+      finalCategoryId = category ? category.id : null;
     }
 
     let parsedDate = new Date();
@@ -513,7 +524,7 @@ router.post('/', requireAuth, async (req, res, next) => {
 
     const newTransaction = await Transaction.create({
       account_id,
-      category_id: category_id || null,
+      category_id: finalCategoryId,
       user_id: req.user.id,
       household_id: account.household_id || null,
       amount: parsedAmount,
@@ -657,7 +668,25 @@ router.delete('/:id', requireAuth, async (req, res, next) => {
     }
 
     const accountId = transaction.account_id;
-    await Transaction.deleteOne({ id: transaction.id });
+    let otherAccountId = null;
+    let otherBalance = null;
+
+    if (transaction.transfer_id) {
+      const otherTx = await Transaction.findOne({
+        transfer_id: transaction.transfer_id,
+        id: { $ne: transaction.id },
+      });
+      if (otherTx) {
+        otherAccountId = otherTx.account_id;
+      }
+      await Transaction.deleteMany({ transfer_id: transaction.transfer_id });
+      await TransactionTransfer.deleteOne({ id: transaction.transfer_id });
+      if (otherAccountId) {
+        otherBalance = await getAccountBalance(otherAccountId);
+      }
+    } else {
+      await Transaction.deleteOne({ id: transaction.id });
+    }
 
     // Cập nhật lại số dư ví thông qua cách tính số dư từ dữ liệu giao dịch
     const updatedBalance = await getAccountBalance(accountId);
@@ -666,6 +695,8 @@ router.delete('/:id', requireAuth, async (req, res, next) => {
       success: true,
       message: 'Xóa giao dịch thành công.',
       balance: updatedBalance,
+      other_account_id: otherAccountId,
+      other_balance: otherBalance,
     });
   } catch (error) {
     next(error);

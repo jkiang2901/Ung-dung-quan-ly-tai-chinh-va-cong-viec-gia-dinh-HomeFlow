@@ -11,6 +11,7 @@ interface HeaderProps {
   onLogoClick?: () => void;
   onLogout?: () => void;
   onOpenFamily?: () => void;
+  onOpenProfile?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -21,6 +22,7 @@ export const Header: React.FC<HeaderProps> = ({
   onLogoClick,
   onLogout,
   onOpenFamily,
+  onOpenProfile,
 }) => {
   return (
     <View style={styles.header}>
@@ -51,11 +53,11 @@ export const Header: React.FC<HeaderProps> = ({
           <View style={styles.unreadDot} />
         </TouchableOpacity>
 
-        {/* Current user avatar — bấm vào để xem màn hình Gia đình */}
+        {/* Current user avatar — bấm vào để cập nhật thông tin cá nhân trên MongoDB Atlas */}
         {currentUser ? (
           <View style={styles.userProfilePill}>
             <TouchableOpacity
-              onPress={onOpenFamily}
+              onPress={onOpenProfile || onOpenFamily}
               activeOpacity={0.8}
               style={styles.avatarButton}
             >

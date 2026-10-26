@@ -7,29 +7,107 @@ import {
   ScrollView,
   StyleSheet,
   TouchableWithoutFeedback,
+  ActivityIndicator,
 } from 'react-native';
-import { X, FileText, ArrowLeftRight, Landmark, ShoppingBag, Baby, PiggyBank, CreditCard, Tag } from 'lucide-react-native';
+import {
+  X,
+  FileText,
+  ArrowLeftRight,
+  Landmark,
+  ShoppingBag,
+  Baby,
+  PiggyBank,
+  CreditCard,
+  Tag,
+  Trash2,
+  Calendar,
+} from 'lucide-react-native';
 import type { Transaction, TransactionType } from '../../types';
 
 interface StatementModalProps {
   visible: boolean;
   transactions: Transaction[];
   onClose: () => void;
+  onDeleteTransaction?: (id: string) => Promise<void> | void;
 }
+
+type TimeFilter = 'all' | 'today' | 'week' | 'month';
 
 export const StatementModal: React.FC<StatementModalProps> = ({
   visible,
   transactions,
   onClose,
+  onDeleteTransaction,
 }) => {
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense' | 'transfer' | 'contribution'>('all');
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const parseTxDate = (tx: Transaction): Date => {
+    if (!tx.date) return new Date();
+    if (tx.date.includes('/')) {
+      const parts = tx.date.split('/');
+      if (parts.length === 3) {
+        return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+      }
+    }
+    const d = new Date(tx.date);
+    return isNaN(d.getTime()) ? new Date() : d;
+  };
 
   const filteredTransactions = useMemo(() => {
-    if (filterType === 'all') return transactions;
-    return transactions.filter((t) => t.type === filterType);
-  }, [transactions, filterType]);
+    let result = transactions;
+
+    // 1. Filter by type
+    if (filterType !== 'all') {
+      result = result.filter((t) => t.type === filterType);
+    }
+
+    // 2. Filter by time
+    if (timeFilter !== 'all') {
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      if (timeFilter === 'today') {
+        result = result.filter((t) => {
+          const d = parseTxDate(t);
+          return d >= startOfToday;
+        });
+      } else if (timeFilter === 'week') {
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        result = result.filter((t) => {
+          const d = parseTxDate(t);
+          return d >= sevenDaysAgo;
+        });
+      } else if (timeFilter === 'month') {
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        result = result.filter((t) => {
+          const d = parseTxDate(t);
+          return d >= startOfMonth;
+        });
+      }
+    }
+
+    return result;
+  }, [transactions, filterType, timeFilter]);
 
   if (!visible) return null;
+
+  const handleDelete = async (id: string, title: string) => {
+    if (!onDeleteTransaction) return;
+    const confirmDelete = typeof window !== 'undefined' && window.confirm
+      ? window.confirm(`Bạn có chắc chắn muốn xóa giao dịch "${title}" trên MongoDB Atlas không?`)
+      : true;
+
+    if (!confirmDelete) return;
+
+    try {
+      setDeletingId(id);
+      await onDeleteTransaction(id);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const formatMoney = (tx: Transaction) => {
     const isIncome = tx.amount > 0 && tx.type === 'income';
@@ -80,8 +158,10 @@ export const StatementModal: React.FC<StatementModalProps> = ({
                     <FileText size={20} color="#2563EB" strokeWidth={2.2} />
                   </View>
                   <View>
-                    <Text style={styles.headerText}>Sao kê chi tiết giao dịch</Text>
-                    <Text style={styles.headerSub}>Tổng số {filteredTransactions.length} giao dịch</Text>
+                    <Text style={styles.headerText}>Sao kê & Lịch sử giao dịch</Text>
+                    <Text style={styles.headerSub}>
+                      {filteredTransactions.length} giao dịch trên MongoDB Atlas
+                    </Text>
                   </View>
                 </View>
                 <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -89,11 +169,42 @@ export const StatementModal: React.FC<StatementModalProps> = ({
                 </TouchableOpacity>
               </View>
 
-              {/* Filter Tabs */}
+              {/* Time Filter Bar */}
+              <View style={styles.timeFilterRow}>
+                <Calendar size={14} color="#64748B" />
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.timeFilterContainer}>
+                  {[
+                    { key: 'all', label: 'Tất cả thời gian' },
+                    { key: 'today', label: 'Hôm nay' },
+                    { key: 'week', label: '7 ngày qua' },
+                    { key: 'month', label: 'Tháng này' },
+                  ].map((tf) => (
+                    <TouchableOpacity
+                      key={tf.key}
+                      onPress={() => setTimeFilter(tf.key as TimeFilter)}
+                      style={[
+                        styles.timeChip,
+                        timeFilter === tf.key && styles.timeChipActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.timeChipText,
+                          timeFilter === tf.key && styles.timeChipTextActive,
+                        ]}
+                      >
+                        {tf.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              {/* Type Filter Tabs */}
               <View style={styles.filterRow}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContainer}>
                   {[
-                    { key: 'all', label: 'Tất cả' },
+                    { key: 'all', label: 'Tất cả loại' },
                     { key: 'expense', label: 'Chi tiêu' },
                     { key: 'income', label: 'Thu nhập' },
                     { key: 'transfer', label: 'Chuyển tiền' },
@@ -116,17 +227,21 @@ export const StatementModal: React.FC<StatementModalProps> = ({
               <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
                 {filteredTransactions.length === 0 ? (
                   <View style={styles.emptyBox}>
-                    <FileText size={40} color="#CBD5E1" />
-                    <Text style={styles.emptyText}>Chưa có giao dịch nào trong mục này</Text>
+                    <FileText size={44} color="#CBD5E1" />
+                    <Text style={styles.emptyTitle}>Chưa có giao dịch nào</Text>
+                    <Text style={styles.emptyText}>
+                      Các giao dịch bạn thêm sẽ được lưu trực tiếp vào MongoDB Atlas và hiển thị ở đây.
+                    </Text>
                   </View>
                 ) : (
                   filteredTransactions.map((tx) => {
                     const badge = getBadgeConfig(tx.type);
                     const iconConfig = getIcon(tx);
                     const IconComp = iconConfig.icon;
+                    const isDeletingThis = deletingId === tx.id;
 
                     return (
-                      <View key={tx.id} style={styles.txItem}>
+                      <View key={tx.id} style={[styles.txItem, isDeletingThis && { opacity: 0.5 }]}>
                         <View style={styles.txLeft}>
                           <View style={[styles.iconCircle, { backgroundColor: iconConfig.bg }]}>
                             <IconComp size={20} color={iconConfig.color} strokeWidth={2.2} />
@@ -150,6 +265,12 @@ export const StatementModal: React.FC<StatementModalProps> = ({
                             {tx.type === 'transfer' && (
                               <Text style={styles.transferPath}>
                                 ↔ {tx.sourceWalletName || 'Ví nguồn'} → {tx.destinationWalletName || 'Ví đích'}
+                              </Text>
+                            )}
+
+                            {tx.sourceWalletName && tx.type !== 'transfer' && (
+                              <Text style={styles.txWalletName}>
+                                💳 Ví: {tx.sourceWalletName}
                               </Text>
                             )}
 
@@ -177,6 +298,25 @@ export const StatementModal: React.FC<StatementModalProps> = ({
                             <Tag size={10} color="#94A3B8" />
                             <Text style={styles.categoryText}>{tx.category}</Text>
                           </View>
+
+                          {/* Delete Transaction Button */}
+                          {onDeleteTransaction && (
+                            <TouchableOpacity
+                              onPress={() => handleDelete(tx.id, tx.title)}
+                              style={styles.deleteBtn}
+                              activeOpacity={0.7}
+                              disabled={isDeletingThis}
+                            >
+                              {isDeletingThis ? (
+                                <ActivityIndicator size="small" color="#DC2626" />
+                              ) : (
+                                <>
+                                  <Trash2 size={13} color="#DC2626" />
+                                  <Text style={styles.deleteBtnText}>Xóa</Text>
+                                </>
+                              )}
+                            </TouchableOpacity>
+                          )}
                         </View>
                       </View>
                     );
@@ -201,7 +341,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    maxHeight: '88%',
+    maxHeight: '90%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.15,
@@ -213,21 +353,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 18,
+    paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
-    backgroundColor: '#F8FAFC',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
   },
   headerTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
   },
   iconBox: {
-    padding: 8,
+    width: 38,
+    height: 38,
     borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerText: {
     fontSize: 16,
@@ -235,35 +376,64 @@ const styles = StyleSheet.create({
     color: '#0F172A',
   },
   headerSub: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#64748B',
-    marginTop: 1,
+    marginTop: 2,
+    fontWeight: '600',
   },
   closeButton: {
     padding: 6,
-    borderRadius: 20,
+    borderRadius: 14,
+    backgroundColor: '#F8FAFC',
   },
-  filterRow: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-    paddingVertical: 10,
-  },
-  filterContainer: {
-    paddingHorizontal: 16,
+  timeFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 12,
     gap: 8,
   },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 14,
-    backgroundColor: '#F1F5F9',
+  timeFilterContainer: {
+    gap: 8,
+  },
+  timeChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
+  timeChipActive: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+  },
+  timeChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  timeChipTextActive: {
+    color: '#056839',
+    fontWeight: '700',
+  },
+  filterRow: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  filterContainer: {
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+  },
   filterChipActive: {
     backgroundColor: '#056839',
-    borderColor: '#056839',
   },
   filterChipText: {
     fontSize: 12,
@@ -274,39 +444,50 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   body: {
-    flexGrow: 0,
+    flex: 1,
   },
   bodyContent: {
-    padding: 16,
+    padding: 20,
+    paddingBottom: 40,
     gap: 12,
-    paddingBottom: 30,
   },
   emptyBox: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
-    gap: 10,
+    paddingVertical: 48,
+    gap: 8,
+  },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#334155',
   },
   emptyText: {
     fontSize: 13,
     color: '#94A3B8',
-    fontWeight: '600',
+    textAlign: 'center',
+    maxWidth: 280,
   },
   txItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     padding: 14,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
     gap: 10,
   },
   txLeft: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: 12,
     flex: 1,
   },
   iconCircle: {
@@ -325,51 +506,76 @@ const styles = StyleSheet.create({
   },
   txTitle: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#0F172A',
+    flexShrink: 1,
   },
   typeBadge: {
     paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
   },
   typeBadgeText: {
     fontSize: 10,
     fontWeight: '800',
   },
   txMeta: {
-    fontSize: 11,
+    fontSize: 11.5,
     color: '#64748B',
     marginTop: 3,
+    fontWeight: '500',
+  },
+  txWalletName: {
+    fontSize: 11,
+    color: '#056839',
+    marginTop: 2,
+    fontWeight: '600',
   },
   transferPath: {
     fontSize: 11,
-    fontWeight: '700',
     color: '#0284C7',
-    marginTop: 2,
+    fontWeight: '700',
+    marginTop: 3,
   },
   txNote: {
-    fontSize: 11,
+    fontSize: 11.5,
     color: '#475569',
     fontStyle: 'italic',
-    marginTop: 2,
+    marginTop: 3,
   },
   txRight: {
     alignItems: 'flex-end',
     gap: 4,
   },
   txAmount: {
-    fontSize: 14,
+    fontSize: 14.5,
     fontWeight: '800',
   },
   categoryTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 4,
   },
   categoryText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     color: '#94A3B8',
+  },
+  deleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#FEF2F2',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
+    marginTop: 4,
+  },
+  deleteBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#DC2626',
   },
 });
