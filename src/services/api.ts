@@ -357,7 +357,7 @@ class ApiService {
       }),
     getMembers: (householdId: string) =>
       this.request<{ success: boolean; data: any[] }>(`/households/${householdId}/members`),
-    inviteMember: (householdId: string, payload: { invited_email: string; role?: 'admin' | 'member' }) =>
+    inviteMember: (householdId: string, payload: { invited_email?: string; role?: 'admin' | 'member' | 'viewer' }) =>
       this.request<{ success: boolean; message: string; invite_token: string; data: any }>(
         `/households/${householdId}/invitations`,
         {
@@ -365,6 +365,29 @@ class ApiService {
           body: JSON.stringify(payload),
         }
       ),
+    getInvitationInfo: (token: string) =>
+      this.request<{
+        success: boolean;
+        message?: string;
+        data?: {
+          invitation_id: string;
+          household_id: string;
+          household_name: string;
+          currency: string;
+          members_count: number;
+          invited_by_name: string;
+          invited_email: string;
+          role: string;
+          role_label: string;
+          expires_at: string;
+          created_at: string;
+        };
+      }>(`/households/invitations/${token}/info`),
+    acceptInvitation: (token: string) =>
+      this.request<{ success: boolean; message: string; household_id?: string }>('/households/invitations/accept', {
+        method: 'POST',
+        body: JSON.stringify({ token }),
+      }),
   };
 
   // --- 6. VIỆC NHÀ (TASKS) API (MongoDB Atlas) ---

@@ -7,6 +7,7 @@ import {
   CheckSquare,
   Plus,
 } from 'lucide-react-native';
+import { useTheme } from '../context/ThemeContext';
 
 export type TabType = 'home' | 'wallet' | 'statistics' | 'tasks' | 'family';
 
@@ -21,6 +22,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   onChangeTab,
   onOpenQuickAdd,
 }) => {
+  const { colors } = useTheme();
+
   const tabs = [
     { id: 'home' as TabType, label: 'Trang chủ', icon: LayoutGrid },
     { id: 'wallet' as TabType, label: 'Ví tiền', icon: Wallet },
@@ -35,7 +38,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           <TouchableOpacity
             onPress={onOpenQuickAdd}
             activeOpacity={0.8}
-            style={styles.addButton}
+            style={[styles.addButton, { backgroundColor: colors.primary, shadowColor: colors.shadow }]}
           >
             <Plus size={28} color="#FFFFFF" strokeWidth={2.5} />
           </TouchableOpacity>
@@ -50,7 +53,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 key={t.id}
                 onPress={() => onChangeTab(t.id)}
                 activeOpacity={0.7}
-                style={[styles.tabItem, isActive && styles.tabItemActive]}
+                style={[styles.tabItem, isActive && [styles.tabItemActive, { backgroundColor: colors.primary }]]}
               >
                 <IconComp
                   size={20}

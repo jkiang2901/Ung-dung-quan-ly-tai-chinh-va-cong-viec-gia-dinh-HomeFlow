@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { Bell, Home, LogOut } from 'lucide-react-native';
 import type { FamilyMember, AuthUser } from '../types';
+import { useTheme } from '../context/ThemeContext';
 
 interface HeaderProps {
   members: FamilyMember[];
@@ -24,6 +25,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenFamily,
   onOpenProfile,
 }) => {
+  const { colors } = useTheme();
+
   return (
     <View style={styles.header}>
       {/* Brand & Logo */}
@@ -32,11 +35,11 @@ export const Header: React.FC<HeaderProps> = ({
         onPress={onLogoClick}
         style={styles.brandContainer}
       >
-        <View style={styles.logoBox}>
+        <View style={[styles.logoBox, { backgroundColor: colors.primary, shadowColor: colors.shadow }]}>
           <Home size={20} color="#FFFFFF" strokeWidth={2.5} />
         </View>
         <View>
-          <Text style={styles.brandTitle}>HomeFlow</Text>
+          <Text style={[styles.brandTitle, { color: colors.primary }]}>HomeFlow</Text>
           <Text style={styles.brandSubtitle}>{subtitle}</Text>
         </View>
       </TouchableOpacity>

@@ -222,9 +222,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
             <Home size={34} color="#FFFFFF" strokeWidth={2.5} />
           </View>
           <Text style={styles.brandName}>HomeFlow</Text>
-          <Text style={styles.brandTagline}>
-            Quản lý tài chính & Công việc gia đình
-          </Text>
         </View>
 
         {/* Main Card */}

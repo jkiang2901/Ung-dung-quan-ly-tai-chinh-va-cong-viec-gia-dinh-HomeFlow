@@ -128,11 +128,16 @@ router.post('/:id/invitations', requireAuth, async (req, res, next) => {
     const householdId = req.params.id;
     const { invited_email, role = 'member' } = req.body;
 
-    if (!invited_email) {
-      return res.status(400).json({
-        success: false,
-        message: 'Vui lòng cung cấp invited_email.',
-      });
+    let targetEmail = '';
+    if (invited_email && typeof invited_email === 'string') {
+      targetEmail = invited_email.toLowerCase().trim();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(targetEmail)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Vui lòng cung cấp email hợp lệ.',
+        });
+      }
     }
 
     // Kiểm tra quyền mời: Phải là owner hoặc admin
@@ -155,18 +160,20 @@ router.post('/:id/invitations', requireAuth, async (req, res, next) => {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 ngày
 
+    const assignedRole = ['admin', 'viewer'].includes(role) ? role : 'member';
+
     const invitation = await HouseholdInvitation.create({
       household_id: householdId,
-      invited_email: invited_email.toLowerCase().trim(),
+      invited_email: targetEmail,
       invited_by: req.user.id,
-      role: role === 'admin' ? 'admin' : 'member',
+      role: assignedRole,
       token_hash,
       expires_at: expiresAt,
     });
 
     res.status(201).json({
       success: true,
-      message: 'Đã gửi lời mời thành công.',
+      message: targetEmail ? 'Đã gửi lời mời thành công.' : 'Đã tạo đường link mời thành công.',
       invite_token: token,
       data: invitation,
     });
@@ -356,6 +363,65 @@ router.delete('/:id/members/:userId', requireAuth, async (req, res, next) => {
     res.json({
       success: true,
       message: isSelf ? 'Bạn đã rời gia đình.' : 'Đã xóa thành viên khỏi gia đình.',
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// @route   GET /api/households/invitations/:token/info
+// @desc    Lấy thông tin lời mời để người nhận xem trước khi xác nhận đồng ý tham gia
+router.get('/invitations/:token/info', async (req, res, next) => {
+  try {
+    const { token } = req.params;
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp token lời mời.' });
+    }
+
+    const token_hash = crypto.createHash('sha256').update(token).digest('hex');
+    const invitation = await HouseholdInvitation.findOne({ token_hash, status: 'pending' });
+
+    if (!invitation) {
+      return res.status(404).json({ success: false, message: 'Lời mời không hợp lệ hoặc đã hết hiệu lực.' });
+    }
+
+    if (invitation.expires_at < new Date()) {
+      invitation.status = 'expired';
+      await invitation.save();
+      return res.status(410).json({ success: false, message: 'Lời mời đã hết hạn.' });
+    }
+
+    const household = await Household.findOne({ id: invitation.household_id });
+    if (!household) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin gia đình tương ứng.' });
+    }
+
+    const inviter = await Profile.findOne({ id: invitation.invited_by });
+    const membersCount = await HouseholdMember.countDocuments({
+      household_id: invitation.household_id,
+      status: 'active',
+    });
+
+    res.json({
+      success: true,
+      data: {
+        invitation_id: invitation.id,
+        household_id: household.id,
+        household_name: household.name,
+        currency: household.currency || 'VND',
+        members_count: membersCount,
+        invited_by_name: inviter?.full_name || 'Chủ hộ',
+        invited_email: invitation.invited_email || '',
+        role: invitation.role,
+        role_label:
+          invitation.role === 'admin'
+            ? 'Quản trị viên'
+            : invitation.role === 'viewer'
+            ? 'Trẻ Em (Chỉ xem)'
+            : 'Thành Viên Gia Đình',
+        expires_at: invitation.expires_at,
+        created_at: invitation.created_at,
+      },
     });
   } catch (error) {
     next(error);

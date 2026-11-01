@@ -18,6 +18,7 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import type { FamilyMember, Wallet, Transaction, RoleType } from '../../types';
+import { useTheme } from '../../context/ThemeContext';
 
 interface WalletTabProps {
   fundBalance: number;
@@ -32,6 +33,7 @@ interface WalletTabProps {
   onOpenDeleteWallet: (wallet: Wallet) => void;
   onOpenStatement: () => void;
   onOpenBudgetLimits: () => void;
+  initialHideBalance?: boolean;
 }
 
 export const WalletTab: React.FC<WalletTabProps> = ({
@@ -47,8 +49,14 @@ export const WalletTab: React.FC<WalletTabProps> = ({
   onOpenDeleteWallet,
   onOpenStatement,
   onOpenBudgetLimits,
+  initialHideBalance = false,
 }) => {
-  const [showBalance, setShowBalance] = useState<boolean>(true);
+  const { colors } = useTheme();
+  const [showBalance, setShowBalance] = useState<boolean>(!initialHideBalance);
+
+  React.useEffect(() => {
+    setShowBalance(!initialHideBalance);
+  }, [initialHideBalance]);
 
   const formatMoney = (amount: number) => {
     return amount.toLocaleString('vi-VN');
@@ -109,8 +117,8 @@ export const WalletTab: React.FC<WalletTabProps> = ({
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* 1. Header Hero Card: QUỸ GIA ĐÌNH CHUNG (GIỮ NGUYÊN STYLE) */}
-      <View style={styles.heroCard}>
+      {/* 1. Header Hero Card: QUỸ GIA ĐÌNH CHUNG */}
+      <View style={[styles.heroCard, { backgroundColor: colors.primary, shadowColor: colors.shadow }]}>
         <View style={styles.watermark}>
           <Home size={130} color="#FFFFFF" opacity={0.09} strokeWidth={1.5} />
         </View>
@@ -156,8 +164,8 @@ export const WalletTab: React.FC<WalletTabProps> = ({
               activeOpacity={0.8}
               style={styles.heroDepositBtn}
             >
-              <Plus size={14} color="#056839" strokeWidth={3} />
-              <Text style={styles.heroDepositBtnText}>Nạp quỹ chung</Text>
+              <Plus size={14} color={colors.primary} strokeWidth={3} />
+              <Text style={[styles.heroDepositBtnText, { color: colors.primary }]}>Nạp quỹ chung</Text>
             </TouchableOpacity>
           </View>
         </View>

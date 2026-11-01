@@ -1,18 +1,27 @@
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { errorHandler } from './src/middleware/errorHandler.js';
 import authRoutes from './src/routes/auth.js';
 import accountRoutes from './src/routes/accounts.js';
 import categoryRoutes from './src/routes/categories.js';
 import transactionRoutes from './src/routes/transactions.js';
 import householdRoutes from './src/routes/households.js';
+import taskRoutes from './src/routes/tasks.js';
 import { seedDefaultCategories } from './src/utils/seedDefaultCategories.js';
 import { Category } from './src/models/Category.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '.env') });
+dotenv.config();
+
 const PORT = process.env.TEST_PORT || 5099;
 const BASE_URL = `http://localhost:${PORT}/api`;
-const TEST_DB_URI = process.env.TEST_MONGODB_URI || 'mongodb://127.0.0.1:27017/homeflow_test';
+const TEST_DB_URI = process.env.TEST_MONGODB_URI || process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/homeflow_test';
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'test_jwt_mock_key';
 process.env.JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d';
@@ -26,6 +35,7 @@ app.use('/api/accounts', accountRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/households', householdRoutes);
+app.use('/api/tasks', taskRoutes);
 app.use(errorHandler);
 
 let serverInstance;

@@ -102,4 +102,25 @@ export interface CategoryBudget {
   limit: number;
 }
 
+export type ThemeColor = 'green' | 'blue' | 'orange' | 'purple';
+
+export interface UserPreferences {
+  hideBalanceDefault: boolean;
+  defaultWalletId?: string;
+  themeColor: ThemeColor;
+  currency: 'VND' | 'USD';
+  notifyDailyTasks: boolean;
+  taskFilterMyOnly: boolean;
+  budgetAlerts: boolean;
+}
+
+export const DEFAULT_USER_PREFERENCES: UserPreferences = {
+  hideBalanceDefault: false,
+  themeColor: 'green',
+  currency: 'VND',
+  notifyDailyTasks: true,
+  taskFilterMyOnly: false,
+  budgetAlerts: true,
+};
+
 

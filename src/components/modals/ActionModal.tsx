@@ -29,6 +29,7 @@ interface ActionModalProps {
   type: ModalType;
   wallets?: Wallet[];
   userRole?: RoleType;
+  defaultWalletId?: string;
   onClose: () => void;
   onSubmitExpense: (data: { title: string; amount: number; category: string; user: string; sourceWalletId?: string; dateTime?: string }) => void;
   onSubmitIncome?: (data: { title: string; amount: number; category: string; user: string; destinationWalletId?: string; dateTime?: string }) => void;
@@ -56,6 +57,7 @@ export const ActionModal: React.FC<ActionModalProps> = ({
   type,
   wallets = [],
   userRole = 'OWNER',
+  defaultWalletId,
   onClose,
   onSubmitExpense,
   onSubmitIncome,
@@ -79,20 +81,28 @@ export const ActionModal: React.FC<ActionModalProps> = ({
     }
   }, [type]);
 
-  const [fromWalletId, setFromWalletId] = useState<string>(activeWallets[1]?.id || activeWallets[0]?.id || '');
+  const [fromWalletId, setFromWalletId] = useState<string>(
+    (defaultWalletId && activeWallets.some((w) => w.id === defaultWalletId))
+      ? defaultWalletId
+      : activeWallets[1]?.id || activeWallets[0]?.id || ''
+  );
   const [toWalletId, setToWalletId] = useState<string>(activeWallets[2]?.id || activeWallets[0]?.id || '');
   const [depositSourceId, setDepositSourceId] = useState<string>(activeWallets[1]?.id || activeWallets[0]?.id || '');
 
-  // Tự động chọn ví hợp lệ khi danh sách ví thay đổi, ưu tiên ví thật
+  // Tự động chọn ví hợp lệ khi danh sách ví thay đổi hoặc defaultWalletId thay đổi
   useEffect(() => {
     if (activeWallets.length > 0) {
+      if (defaultWalletId && activeWallets.some((w) => w.id === defaultWalletId)) {
+        setFromWalletId(defaultWalletId);
+        return;
+      }
       const isValid = activeWallets.some((w) => w.id === fromWalletId);
       if (!isValid) {
         const realWallet = activeWallets.find((w) => !w.id.startsWith('w-'));
         setFromWalletId(realWallet ? realWallet.id : activeWallets[0].id);
       }
     }
-  }, [activeWallets, fromWalletId]);
+  }, [activeWallets, defaultWalletId, fromWalletId]);
 
   const [note, setNote] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);

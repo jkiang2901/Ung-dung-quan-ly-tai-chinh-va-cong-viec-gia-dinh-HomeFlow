@@ -243,9 +243,6 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                           }}
                           style={styles.amountInput}
                         />
-                        <Text style={styles.helperText}>
-                          Số dư sau này sẽ tự động tính = Số dư ban đầu + Tiền vào - Tiền ra.
-                        </Text>
                       </View>
                     )}
 

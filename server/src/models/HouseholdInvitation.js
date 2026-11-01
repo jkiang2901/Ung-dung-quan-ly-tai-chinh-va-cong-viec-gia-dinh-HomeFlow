@@ -17,9 +17,10 @@ const householdInvitationSchema = new mongoose.Schema(
     },
     invited_email: {
       type: String,
-      required: true,
+      required: false,
       trim: true,
       lowercase: true,
+      default: '',
     },
     invited_by: {
       type: String,
@@ -28,7 +29,7 @@ const householdInvitationSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['admin', 'member'],
+      enum: ['admin', 'member', 'viewer'],
       default: 'member',
     },
     token_hash: {

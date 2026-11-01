@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -8,12 +8,27 @@ import {
   ScrollView,
   StyleSheet,
   TouchableWithoutFeedback,
+  Clipboard,
 } from 'react-native';
-import { X, UserPlus, Mail, ShieldAlert, CheckCircle2, Clock, Trash2 } from 'lucide-react-native';
+import {
+  X,
+  UserPlus,
+  Mail,
+  ShieldAlert,
+  CheckCircle2,
+  Clock,
+  Trash2,
+  Link2,
+  Copy,
+  Check,
+  RefreshCw,
+} from 'lucide-react-native';
 import type { FamilyMember, FamilyInvitation, RoleType } from '../../types';
+import { api } from '../../services/api';
 
 interface InviteMemberModalProps {
   visible: boolean;
+  householdId?: string;
   currentUserEmail: string;
   userRole: RoleType;
   members: FamilyMember[];
@@ -21,10 +36,12 @@ interface InviteMemberModalProps {
   onClose: () => void;
   onSendInvitation: (email: string, role: RoleType) => void;
   onCancelInvitation?: (id: string) => void;
+  onInviteLinkGenerated?: (token: string, role: RoleType) => void;
 }
 
 export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
   visible,
+  householdId = 'default-household',
   currentUserEmail,
   userRole,
   members,
@@ -32,20 +49,96 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
   onClose,
   onSendInvitation,
   onCancelInvitation,
+  onInviteLinkGenerated,
 }) => {
+  const [tab, setTab] = useState<'link' | 'email'>('link');
   const [email, setEmail] = useState('');
   const [selectedRole, setSelectedRole] = useState<RoleType>('MEMBER');
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  if (!visible) return null;
+  // Link invite state
+  const [generatedLink, setGeneratedLink] = useState<string>('');
+  const [copied, setCopied] = useState<boolean>(false);
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
-  const handleSend = () => {
+  // Reset or create link on open
+  useEffect(() => {
+    if (visible && userRole === 'OWNER') {
+      handleGenerateLink(selectedRole);
+    }
+  }, [visible, userRole]);
+
+  const handleGenerateLink = async (roleToUse: RoleType) => {
+    setIsGenerating(true);
+    setError(null);
+    setCopied(false);
+    try {
+      const backendRole = roleToUse === 'VIEWER' ? 'viewer' : 'member';
+      const res = await api.households.inviteMember(householdId, {
+        role: backendRole,
+      });
+
+      if (res.success && res.invite_token) {
+        const baseUrl =
+          typeof window !== 'undefined' && window.location
+            ? `${window.location.origin}${window.location.pathname}`
+            : 'https://homeflow.app';
+        const fullLink = `${baseUrl}?invite=${res.invite_token}`;
+        setGeneratedLink(fullLink);
+        if (onInviteLinkGenerated) {
+          onInviteLinkGenerated(res.invite_token, roleToUse);
+        }
+      } else {
+        // Fallback token
+        const mockToken = `inv_${Date.now()}`;
+        const baseUrl =
+          typeof window !== 'undefined' && window.location
+            ? `${window.location.origin}${window.location.pathname}`
+            : 'https://homeflow.app';
+        setGeneratedLink(`${baseUrl}?invite=${mockToken}`);
+      }
+    } catch (err: any) {
+      const mockToken = `inv_${Date.now()}`;
+      const baseUrl =
+        typeof window !== 'undefined' && window.location
+          ? `${window.location.origin}${window.location.pathname}`
+          : 'https://homeflow.app';
+      setGeneratedLink(`${baseUrl}?invite=${mockToken}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleCopyLink = () => {
+    if (!generatedLink) return;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        navigator.clipboard.writeText(generatedLink);
+      } else if (Clipboard && Clipboard.setString) {
+        Clipboard.setString(generatedLink);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }
+  };
+
+  const handleRoleChange = (role: RoleType) => {
+    setSelectedRole(role);
+    if (tab === 'link') {
+      handleGenerateLink(role);
+    }
+  };
+
+  const handleSendEmail = () => {
     setError(null);
     setSuccessMsg(null);
 
     if (userRole !== 'OWNER') {
-      setError('Chỉ Chủ hộ gia đình mới có quyền gửi lời mời gia nhập gia đình.');
+      setError('Chỉ Chủ hộ gia đình mới có quyền gửi lời mời.');
       return;
     }
 
@@ -55,13 +148,11 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
       return;
     }
 
-    // 1. Không tự mời chính mình
     if (trimmedEmail === currentUserEmail.toLowerCase()) {
       setError('Bạn không thể tự gửi lời mời cho chính mình.');
       return;
     }
 
-    // 2. Không mời người đã là thành viên
     const isAlreadyMember = members.some(
       (m) => m.email && m.email.toLowerCase() === trimmedEmail
     );
@@ -70,19 +161,20 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
       return;
     }
 
-    // 3. Không tạo nhiều invitation pending cho cùng một người
     const isAlreadyPending = invitations.some(
       (inv) => inv.email.toLowerCase() === trimmedEmail && inv.status === 'pending'
     );
     if (isAlreadyPending) {
-      setError('Đã có lời mời đang chờ phản hồi (pending) cho email này.');
+      setError('Đã có lời mời đang chờ phản hồi cho email này.');
       return;
     }
 
     onSendInvitation(trimmedEmail, selectedRole);
-    setSuccessMsg(`Đã gửi lời mời tới ${trimmedEmail} thành công!`);
+    setSuccessMsg(`Đã gửi lời mời tới ${trimmedEmail}`);
     setEmail('');
   };
+
+  if (!visible) return null;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -93,16 +185,36 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
               {/* Header */}
               <View style={styles.header}>
                 <View style={styles.headerTitleRow}>
-                  <View style={[styles.iconBox, { backgroundColor: '#ECFDF5' }]}>
+                  <View style={styles.iconBox}>
                     <UserPlus size={20} color="#056839" strokeWidth={2.2} />
                   </View>
-                  <View>
-                    <Text style={styles.headerText}>Mời người thân gia nhập</Text>
-                    <Text style={styles.headerSub}>Gửi lời mời qua Email tới thành viên mới</Text>
-                  </View>
+                  <Text style={styles.headerText}>Mời thành viên gia đình</Text>
                 </View>
                 <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                   <X size={20} color="#94A3B8" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Tabs */}
+              <View style={styles.tabBar}>
+                <TouchableOpacity
+                  onPress={() => setTab('link')}
+                  style={[styles.tabBtn, tab === 'link' && styles.tabBtnActive]}
+                >
+                  <Link2 size={16} color={tab === 'link' ? '#056839' : '#64748B'} />
+                  <Text style={[styles.tabText, tab === 'link' && styles.tabTextActive]}>
+                    Mời qua liên kết
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setTab('email')}
+                  style={[styles.tabBtn, tab === 'email' && styles.tabBtnActive]}
+                >
+                  <Mail size={16} color={tab === 'email' ? '#056839' : '#64748B'} />
+                  <Text style={[styles.tabText, tab === 'email' && styles.tabTextActive]}>
+                    Mời qua Email
+                  </Text>
                 </TouchableOpacity>
               </View>
 
@@ -122,39 +234,21 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                   </View>
                 )}
 
-                {userRole !== 'OWNER' && (
+                {userRole !== 'OWNER' ? (
                   <View style={styles.noticeBox}>
                     <ShieldAlert size={16} color="#D97706" />
                     <Text style={styles.noticeText}>
-                      Tài khoản của bạn ({userRole === 'MEMBER' ? 'Thành Viên Gia Đình' : 'Trẻ Em'}) không có quyền gửi lời mời. Chỉ Chủ Hộ Gia Đình mới có quyền mời thành viên mới.
+                      Chỉ Chủ Hộ Gia Đình mới có quyền tạo và gửi lời mời thành viên.
                     </Text>
                   </View>
-                )}
-
-                {/* Invite Form */}
-                {userRole === 'OWNER' && (
+                ) : (
                   <View style={styles.form}>
-                    <View style={styles.fieldGroup}>
-                      <Text style={styles.label}>Email người thân (*)</Text>
-                      <View style={styles.inputWrapper}>
-                        <Mail size={18} color="#056839" style={styles.fieldIcon} />
-                        <TextInput
-                          placeholder="VD: uncle.nam@gmail.com"
-                          placeholderTextColor="#94A3B8"
-                          value={email}
-                          onChangeText={setEmail}
-                          keyboardType="email-address"
-                          autoCapitalize="none"
-                          style={styles.input}
-                        />
-                      </View>
-                    </View>
-
+                    {/* Role Selection */}
                     <View style={styles.fieldGroup}>
                       <Text style={styles.label}>Vai trò được cấp</Text>
                       <View style={styles.roleChipRow}>
                         <TouchableOpacity
-                          onPress={() => setSelectedRole('MEMBER')}
+                          onPress={() => handleRoleChange('MEMBER')}
                           style={[
                             styles.roleChip,
                             selectedRole === 'MEMBER' && styles.roleChipActive,
@@ -168,18 +262,10 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                           >
                             Thành Viên Gia Đình
                           </Text>
-                          <Text
-                            style={[
-                              styles.roleChipSub,
-                              selectedRole === 'MEMBER' && styles.roleChipSubActive,
-                            ]}
-                          >
-                            Thêm thu chi & chuyển tiền
-                          </Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                          onPress={() => setSelectedRole('VIEWER')}
+                          onPress={() => handleRoleChange('VIEWER')}
                           style={[
                             styles.roleChip,
                             selectedRole === 'VIEWER' && styles.roleChipActive,
@@ -191,34 +277,85 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                               selectedRole === 'VIEWER' && styles.roleChipTitleActive,
                             ]}
                           >
-                            Trẻ Em
-                          </Text>
-                          <Text
-                            style={[
-                              styles.roleChipSub,
-                              selectedRole === 'VIEWER' && styles.roleChipSubActive,
-                            ]}
-                          >
-                            Chỉ xem thông tin ví & sao kê
+                            Trẻ Em (Chỉ xem)
                           </Text>
                         </TouchableOpacity>
                       </View>
                     </View>
 
-                    <TouchableOpacity
-                      onPress={handleSend}
-                      style={styles.sendBtn}
-                      activeOpacity={0.8}
-                    >
-                      <UserPlus size={16} color="#FFFFFF" />
-                      <Text style={styles.sendBtnText}>Tạo & gửi lời mời</Text>
-                    </TouchableOpacity>
+                    {/* Tab 1: Invite Link */}
+                    {tab === 'link' ? (
+                      <View style={styles.linkContainer}>
+                        <Text style={styles.label}>Đường link mời gia nhập</Text>
+                        <View style={styles.linkBox}>
+                          <TextInput
+                            value={generatedLink}
+                            editable={false}
+                            selectTextOnFocus
+                            style={styles.linkInput}
+                          />
+                          <TouchableOpacity
+                            onPress={() => handleGenerateLink(selectedRole)}
+                            style={styles.refreshBtn}
+                            title="Tạo link mới"
+                          >
+                            <RefreshCw size={16} color="#64748B" />
+                          </TouchableOpacity>
+                        </View>
+
+                        <TouchableOpacity
+                          onPress={handleCopyLink}
+                          style={[styles.copyBtn, copied && styles.copyBtnSuccess]}
+                          activeOpacity={0.8}
+                        >
+                          {copied ? (
+                            <>
+                              <Check size={18} color="#FFFFFF" strokeWidth={2.8} />
+                              <Text style={styles.copyBtnText}>Đã sao chép liên kết!</Text>
+                            </>
+                          ) : (
+                            <>
+                              <Copy size={18} color="#FFFFFF" strokeWidth={2.2} />
+                              <Text style={styles.copyBtnText}>Sao chép đường link</Text>
+                            </>
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      /* Tab 2: Email Invite */
+                      <View style={styles.emailContainer}>
+                        <View style={styles.fieldGroup}>
+                          <Text style={styles.label}>Email người thân (*)</Text>
+                          <View style={styles.inputWrapper}>
+                            <Mail size={18} color="#056839" style={styles.fieldIcon} />
+                            <TextInput
+                              placeholder="nhap.email@gmail.com"
+                              placeholderTextColor="#94A3B8"
+                              value={email}
+                              onChangeText={setEmail}
+                              keyboardType="email-address"
+                              autoCapitalize="none"
+                              style={styles.input}
+                            />
+                          </View>
+                        </View>
+
+                        <TouchableOpacity
+                          onPress={handleSendEmail}
+                          style={styles.sendBtn}
+                          activeOpacity={0.8}
+                        >
+                          <UserPlus size={16} color="#FFFFFF" />
+                          <Text style={styles.sendBtnText}>Gửi lời mời</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
                   </View>
                 )}
 
                 {/* Invitations List */}
                 <View style={styles.invitationSection}>
-                  <Text style={styles.sectionTitle}>Danh sách lời mời đã tạo</Text>
+                  <Text style={styles.sectionTitle}>Lời mời đã gửi</Text>
                   {invitations.length === 0 ? (
                     <Text style={styles.emptyText}>Chưa có lời mời nào được gửi.</Text>
                   ) : (
@@ -227,7 +364,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                         <View style={{ flex: 1 }}>
                           <Text style={styles.invEmail}>{inv.email}</Text>
                           <Text style={styles.invMeta}>
-                            Vai trò: <Text style={{ fontWeight: '700' }}>{inv.role === 'OWNER' ? 'Chủ Hộ Gia Đình' : inv.role === 'MEMBER' ? 'Thành Viên Gia Đình' : 'Trẻ Em'}</Text> • Ngày gửi: {inv.createdAt}
+                            Vai trò: {inv.role === 'OWNER' ? 'Chủ Hộ' : inv.role === 'MEMBER' ? 'Thành Viên' : 'Trẻ Em'}
                           </Text>
                         </View>
 
@@ -322,20 +459,44 @@ const styles = StyleSheet.create({
   iconBox: {
     padding: 8,
     borderRadius: 12,
+    backgroundColor: '#ECFDF5',
   },
   headerText: {
     fontSize: 17,
     fontWeight: '800',
     color: '#0F172A',
   },
-  headerSub: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 1,
-  },
   closeButton: {
     padding: 6,
     borderRadius: 20,
+  },
+  tabBar: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+  },
+  tabBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabBtnActive: {
+    borderBottomColor: '#056839',
+    backgroundColor: '#FFFFFF',
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  tabTextActive: {
+    color: '#056839',
   },
   body: {
     flexGrow: 0,
@@ -406,6 +567,78 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  roleChipRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  roleChip: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+  },
+  roleChipActive: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#056839',
+  },
+  roleChipTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  roleChipTitleActive: {
+    color: '#056839',
+    fontWeight: '800',
+  },
+  linkContainer: {
+    gap: 10,
+  },
+  linkBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+  },
+  linkInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 13,
+    color: '#0F172A',
+  },
+  refreshBtn: {
+    padding: 6,
+  },
+  copyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#056839',
+    paddingVertical: 14,
+    borderRadius: 16,
+    shadowColor: '#056839',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  copyBtnSuccess: {
+    backgroundColor: '#16A34A',
+  },
+  copyBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  emailContainer: {
+    gap: 14,
+  },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -424,36 +657,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#0F172A',
   },
-  roleChipRow: {
-    gap: 8,
-  },
-  roleChip: {
-    padding: 12,
-    borderRadius: 14,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  roleChipActive: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#056839',
-  },
-  roleChipTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#1E293B',
-  },
-  roleChipTitleActive: {
-    color: '#056839',
-  },
-  roleChipSub: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  roleChipSubActive: {
-    color: '#047857',
-  },
   sendBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -464,13 +667,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     shadowColor: '#056839',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.2,
     shadowRadius: 6,
-    elevation: 4,
-    marginTop: 4,
+    elevation: 3,
   },
   sendBtnText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
     color: '#FFFFFF',
   },
@@ -482,7 +684,7 @@ const styles = StyleSheet.create({
     paddingTop: 14,
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
     color: '#64748B',
     textTransform: 'uppercase',

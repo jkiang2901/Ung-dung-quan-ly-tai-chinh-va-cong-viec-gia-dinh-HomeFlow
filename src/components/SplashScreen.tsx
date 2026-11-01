@@ -55,9 +55,6 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
             <Text style={styles.titleText}>HomeFlow</Text>
             <Text style={styles.dotText}>.</Text>
           </View>
-          <Text style={styles.subtitleText}>
-            Tổ ấm thảnh thơi <Text style={styles.bullet}>•</Text> Tài chính vẹn tròn
-          </Text>
         </View>
       </View>
 

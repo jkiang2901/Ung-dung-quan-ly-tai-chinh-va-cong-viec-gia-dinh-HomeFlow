@@ -14,12 +14,15 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import type { HouseholdTask, FamilyMember } from '../../types';
 import { CheckCircle2, Circle, Clock, Plus, X } from 'lucide-react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 interface TasksTabProps {
   tasks?: HouseholdTask[];
   members: FamilyMember[];
   onToggleTask: (id: string) => void;
   onAddTask?: (task: HouseholdTask) => void;
+  showCreateModal?: boolean;
+  onCloseCreateModal?: () => void;
 }
 
 export const TasksTab: React.FC<TasksTabProps> = ({
@@ -27,10 +30,27 @@ export const TasksTab: React.FC<TasksTabProps> = ({
   members,
   onToggleTask,
   onAddTask,
+  showCreateModal: externalShowCreateModal,
+  onCloseCreateModal,
 }) => {
+  const { colors } = useTheme();
   const [localTodayTasks, setLocalTodayTasks] = useState<HouseholdTask[]>(tasks || []);
   const [localUpcomingTasks, setLocalUpcomingTasks] = useState<HouseholdTask[]>([]);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [internalShowModal, setInternalShowModal] = useState(false);
+  const isCreateModalOpen =
+    externalShowCreateModal !== undefined ? externalShowCreateModal : internalShowModal;
+
+  const handleOpenCreateModal = () => {
+    setInternalShowModal(true);
+  };
+
+  const handleCloseCreateModal = () => {
+    setInternalShowModal(false);
+    if (onCloseCreateModal) {
+      onCloseCreateModal();
+    }
+  };
+
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -134,7 +154,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
     setSelectedTime(new Date());
     setSelectedMember(members[0]?.name || 'Tôi');
     setTaskPriority(false);
-    setShowCreateModal(false);
+    handleCloseCreateModal();
   };
 
   return (
@@ -142,12 +162,12 @@ export const TasksTab: React.FC<TasksTabProps> = ({
       <View style={styles.headerRow}>
         <View style={styles.header}>
           <Text style={styles.title}>Quản Lý Việc Nhà</Text>
-          <Text style={styles.subtitle}>
-            Phân công nhiệm vụ & chăm sóc tổ ấm gia đình
-          </Text>
         </View>
 
-        <TouchableOpacity style={styles.addButton} onPress={() => setShowCreateModal(true)}>
+        <TouchableOpacity
+          style={[styles.addButton, { backgroundColor: colors.primary, shadowColor: colors.shadow }]}
+          onPress={handleOpenCreateModal}
+        >
           <Plus size={16} color="#FFFFFF" />
           <Text style={styles.addButtonText}>Tạo việc</Text>
         </TouchableOpacity>
@@ -252,18 +272,18 @@ export const TasksTab: React.FC<TasksTabProps> = ({
       </View>
 
       <Modal
-        visible={showCreateModal}
+        visible={isCreateModalOpen}
         transparent
         animationType="slide"
-        onRequestClose={() => setShowCreateModal(false)}
+        onRequestClose={handleCloseCreateModal}
       >
-        <TouchableWithoutFeedback onPress={() => setShowCreateModal(false)}>
+        <TouchableWithoutFeedback onPress={handleCloseCreateModal}>
           <View style={styles.overlay}>
             <TouchableWithoutFeedback onPress={(event) => event.stopPropagation()}>
               <View style={styles.modalCard}>
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>Tạo công việc mới</Text>
-                  <TouchableOpacity onPress={() => setShowCreateModal(false)} style={styles.closeButton}>
+                  <TouchableOpacity onPress={handleCloseCreateModal} style={styles.closeButton}>
                     <X size={18} color="#64748B" />
                   </TouchableOpacity>
                 </View>
@@ -330,7 +350,13 @@ export const TasksTab: React.FC<TasksTabProps> = ({
                         <TouchableOpacity
                           key={member.id}
                           onPress={() => setSelectedMember(member.name)}
-                          style={[styles.memberChip, selectedMember === member.name && styles.memberChipActive]}
+                          style={[
+                            styles.memberChip,
+                            selectedMember === member.name && [
+                              styles.memberChipActive,
+                              { backgroundColor: colors.primary, borderColor: colors.primary },
+                            ],
+                          ]}
                         >
                           <Text style={[styles.memberChipText, selectedMember === member.name && styles.memberChipTextActive]}>
                             {member.name}
@@ -350,7 +376,10 @@ export const TasksTab: React.FC<TasksTabProps> = ({
                     </Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={styles.submitButton} onPress={handleCreateTask}>
+                  <TouchableOpacity
+                    style={[styles.submitButton, { backgroundColor: colors.primary, shadowColor: colors.shadow }]}
+                    onPress={handleCreateTask}
+                  >
                     <Text style={styles.submitButtonText}>Lưu công việc</Text>
                   </TouchableOpacity>
                 </View>

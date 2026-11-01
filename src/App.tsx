@@ -22,8 +22,10 @@ import { WalletTab } from './components/tabs/WalletTab';
 import { StatisticsTab } from './components/tabs/StatisticsTab';
 import { TasksTab } from './components/tabs/TasksTab';
 import { FamilyTab } from './components/tabs/FamilyTab';
+import { ConfirmInviteModal, type InvitationInfo } from './components/modals/ConfirmInviteModal';
 import { SplashScreen } from './components/SplashScreen';
 import { AuthScreen } from './components/auth/AuthScreen';
+import { ThemeProvider } from './context/ThemeContext';
 import {
   api,
   mapBackendAccountToWallet,
@@ -40,7 +42,9 @@ import type {
   CategoryBudget,
   FamilyInvitation,
   RoleType,
+  UserPreferences,
 } from './types';
+import { DEFAULT_USER_PREFERENCES } from './types';
 
 export function App() {
   const [showSplash, setShowSplash] = useState<boolean>(true);
@@ -87,6 +91,32 @@ export function App() {
   const [budgetLimitsVisible, setBudgetLimitsVisible] = useState<boolean>(false);
   const [inviteModalVisible, setInviteModalVisible] = useState<boolean>(false);
   const [editProfileVisible, setEditProfileVisible] = useState<boolean>(false);
+  const [createTaskModalVisible, setCreateTaskModalVisible] = useState<boolean>(false);
+
+  // User Personalization Preferences State
+  const [userPreferences, setUserPreferences] = useState<UserPreferences>(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const stored = window.localStorage.getItem('homeflow_preferences');
+        if (stored) return JSON.parse(stored);
+      } catch {}
+    }
+    return DEFAULT_USER_PREFERENCES;
+  });
+
+  const handleUpdatePreferences = (prefs: UserPreferences) => {
+    setUserPreferences(prefs);
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.setItem('homeflow_preferences', JSON.stringify(prefs));
+      } catch {}
+    }
+    showToastMessage('✅ Đã lưu cài đặt cá nhân hóa!');
+  };
+
+  // Link Invite Confirmation State
+  const [pendingInvitation, setPendingInvitation] = useState<InvitationInfo | null>(null);
+  const [isAcceptingInvite, setIsAcceptingInvite] = useState<boolean>(false);
 
   // Derived Values
   const userRole: RoleType = currentUser?.role || 'OWNER';
@@ -109,6 +139,36 @@ export function App() {
       setToast(null);
     }, 3200);
   };
+
+  // Phát hiện và xử lý link mời gia nhập (?invite=TOKEN hoặc ?token=TOKEN)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location) {
+      const searchParams = new URLSearchParams(window.location.search);
+      const inviteToken = searchParams.get('invite') || searchParams.get('token');
+      if (inviteToken) {
+        api.households
+          .getInvitationInfo(inviteToken)
+          .then((res) => {
+            if (res.success && res.data) {
+              setPendingInvitation({
+                token: inviteToken,
+                household_id: res.data.household_id,
+                household_name: res.data.household_name,
+                currency: res.data.currency,
+                members_count: res.data.members_count,
+                invited_by_name: res.data.invited_by_name,
+                role: res.data.role,
+                role_label: res.data.role_label,
+                expires_at: res.data.expires_at,
+              });
+            }
+          })
+          .catch((err) => {
+            console.warn('Lỗi đọc thông tin lời mời:', err);
+          });
+      }
+    }
+  }, []);
 
   // Khôi phục phiên đăng nhập thật nếu đã lưu token trong localStorage
   useEffect(() => {
@@ -553,6 +613,43 @@ export function App() {
     showToastMessage('Đã hủy lời mời.');
   };
 
+  // 10. XÁC NHẬN HOẶC TỪ CHỐI LỜI MỜI GIA NHẬP GIA ĐÌNH QUA LINK
+  const handleConfirmJoinHousehold = async () => {
+    if (!pendingInvitation) return;
+
+    if (!currentUser) {
+      showToastMessage('Vui lòng đăng nhập để hoàn tất việc tham gia gia đình.');
+      return;
+    }
+
+    setIsAcceptingInvite(true);
+    try {
+      const res = await api.households.acceptInvitation(pendingInvitation.token);
+      if (res.success) {
+        showToastMessage(`🎉 Bạn đã tham gia gia đình "${pendingInvitation.household_name}" thành công!`);
+        if (typeof window !== 'undefined' && window.history && window.location) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        setPendingInvitation(null);
+        fetchBackendData();
+      } else {
+        showToastMessage(`⚠️ ${res.message || 'Không thể chấp nhận lời mời'}`);
+      }
+    } catch (err: any) {
+      showToastMessage(`⚠️ Lỗi: ${err.message || 'Không thể chấp nhận lời mời'}`);
+    } finally {
+      setIsAcceptingInvite(false);
+    }
+  };
+
+  const handleRejectInvitation = () => {
+    if (typeof window !== 'undefined' && window.history && window.location) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    setPendingInvitation(null);
+    showToastMessage('Đã từ chối lời mời gia nhập gia đình.');
+  };
+
   const handleToggleTask = async (id: string) => {
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)));
     try {
@@ -598,6 +695,7 @@ export function App() {
               userName={currentUser?.name || 'Cá nhân'}
               balance={currentUser?.personalBalance ?? 0}
               familyFundBalance={fundBalance}
+              initialHideBalance={userPreferences.hideBalanceDefault}
               onGoToFamilyFund={() => setActiveTab('wallet')}
               onDepositToFund={() => setActionModalType('deposit')}
             />
@@ -629,6 +727,7 @@ export function App() {
             transactions={transactions}
             members={members}
             userRole={userRole}
+            initialHideBalance={userPreferences.hideBalanceDefault}
             onOpenDeposit={() => setActionModalType('deposit')}
             onOpenTransfer={() => setActionModalType('transfer')}
             onOpenAddWallet={() =>
@@ -649,12 +748,20 @@ export function App() {
         return <StatisticsTab />;
 
       case 'tasks':
+        const filteredTasks = userPreferences.taskFilterMyOnly
+          ? tasks.filter(
+              (t) =>
+                (t.assignedTo || '').toLowerCase() === (currentUser?.name || '').toLowerCase()
+            )
+          : tasks;
         return (
           <TasksTab
-            tasks={tasks}
+            tasks={filteredTasks}
             members={members}
             onToggleTask={handleToggleTask}
             onAddTask={handleAddTask}
+            showCreateModal={createTaskModalVisible}
+            onCloseCreateModal={() => setCreateTaskModalVisible(false)}
           />
         );
 
@@ -672,7 +779,18 @@ export function App() {
     }
   };
 
+  const handleBottomNavAdd = () => {
+    if (activeTab === 'tasks') {
+      setCreateTaskModalVisible(true);
+    } else if (activeTab === 'family') {
+      setInviteModalVisible(true);
+    } else {
+      setActionModalType('quick_add');
+    }
+  };
+
   return (
+    <ThemeProvider themeColor={userPreferences.themeColor}>
     <SafeAreaView style={styles.outerContainer}>
       <StatusBar style="dark" />
       {showSplash && (
@@ -709,7 +827,7 @@ export function App() {
           <BottomNav
             activeTab={activeTab}
             onChangeTab={setActiveTab}
-            onOpenQuickAdd={() => setActionModalType('quick_add')}
+            onOpenQuickAdd={handleBottomNavAdd}
           />
 
           {/* Modal Action Suite */}
@@ -717,6 +835,7 @@ export function App() {
             type={actionModalType}
             wallets={wallets}
             userRole={userRole}
+            defaultWalletId={userPreferences.defaultWalletId}
             onClose={() => setActionModalType(null)}
             onSubmitExpense={handleAddExpense}
             onSubmitIncome={handleAddIncome}
@@ -778,14 +897,25 @@ export function App() {
           <EditProfileModal
             visible={editProfileVisible}
             currentUser={currentUser}
+            wallets={wallets}
+            preferences={userPreferences}
             onClose={() => setEditProfileVisible(false)}
             onProfileUpdated={(updatedUser) => {
               setCurrentUser(updatedUser);
-              showToastMessage('✅ Đã cập nhật thông tin cá nhân trên MongoDB Atlas!');
+              showToastMessage('✅ Đã cập nhật thông tin cá nhân!');
             }}
+            onPreferencesUpdated={handleUpdatePreferences}
           />
         </View>
       )}
+
+      <ConfirmInviteModal
+        visible={!!pendingInvitation}
+        loading={isAcceptingInvite}
+        invitationInfo={pendingInvitation}
+        onConfirm={handleConfirmJoinHousehold}
+        onReject={handleRejectInvitation}
+      />
 
       {toast && (
         <View style={styles.toastContainer}>
@@ -793,6 +923,7 @@ export function App() {
         </View>
       )}
     </SafeAreaView>
+    </ThemeProvider>
   );
 }
 

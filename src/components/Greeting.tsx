@@ -12,9 +12,6 @@ export const Greeting: React.FC<GreetingProps> = ({ userName = 'bạn' }) => {
         <Text style={styles.title}>
           Chào {userName}! 👋
         </Text>
-        <Text style={styles.subtitle}>
-          Gia đình Hạnh Phúc <Text style={styles.dot}>•</Text> Tháng 10 ấm no
-        </Text>
       </View>
 
       {/* Pill with family photos preview */}

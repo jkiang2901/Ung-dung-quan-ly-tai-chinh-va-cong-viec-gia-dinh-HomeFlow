@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Eye, EyeOff, User, ArrowUpRight, ShieldCheck, Wallet } from 'lucide-react-native';
+import { useTheme } from '../context/ThemeContext';
 
 interface PersonalWalletCardProps {
   userName?: string;
   balance: number;
   familyFundBalance: number;
+  initialHideBalance?: boolean;
   onGoToFamilyFund?: () => void;
   onDepositToFund?: () => void;
 }
@@ -14,17 +16,23 @@ export const PersonalWalletCard: React.FC<PersonalWalletCardProps> = ({
   userName = 'Cá nhân',
   balance,
   familyFundBalance,
+  initialHideBalance = false,
   onGoToFamilyFund,
   onDepositToFund,
 }) => {
-  const [showBalance, setShowBalance] = useState<boolean>(true);
+  const { colors } = useTheme();
+  const [showBalance, setShowBalance] = useState<boolean>(!initialHideBalance);
+
+  React.useEffect(() => {
+    setShowBalance(!initialHideBalance);
+  }, [initialHideBalance]);
 
   const formatMoney = (amount: number) => {
     return amount.toLocaleString('vi-VN');
   };
 
   return (
-    <View style={styles.cardContainer}>
+    <View style={[styles.cardContainer, { backgroundColor: colors.primary, shadowColor: colors.shadow }]}>
       {/* Decorative background watermark */}
       <View style={styles.watermark}>
         <Wallet size={130} color="#FFFFFF" opacity={0.08} />
@@ -33,12 +41,12 @@ export const PersonalWalletCard: React.FC<PersonalWalletCardProps> = ({
       {/* Top section: Title badge & Hide/Show toggle */}
       <View style={styles.topRow}>
         <View style={styles.badgeRow}>
-          <View style={styles.userBadge}>
-            <User size={13} color="#056839" strokeWidth={2.5} />
-            <Text style={styles.userBadgeText}>VÍ CÁ NHÂN • {userName.toUpperCase()}</Text>
+          <View style={[styles.userBadge, { backgroundColor: colors.primaryLight }]}>
+            <User size={13} color={colors.primary} strokeWidth={2.5} />
+            <Text style={[styles.userBadgeText, { color: colors.primary }]}>VÍ CÁ NHÂN • {userName.toUpperCase()}</Text>
           </View>
           <View style={styles.officialTag}>
-            <Text style={styles.officialText}>Tài khoản riêng</Text>
+            <Text style={[styles.officialText, { color: colors.textLight }]}>Tài khoản riêng</Text>
           </View>
         </View>
 
@@ -75,7 +83,7 @@ export const PersonalWalletCard: React.FC<PersonalWalletCardProps> = ({
           style={styles.fundPill}
         >
           <View style={styles.fundIconCircle}>
-            <ShieldCheck size={13} color="#056839" />
+            <ShieldCheck size={13} color={colors.primary} />
           </View>
           <View>
             <Text style={styles.fundSubLabel}>Quỹ chung gia đình</Text>
@@ -93,7 +101,7 @@ export const PersonalWalletCard: React.FC<PersonalWalletCardProps> = ({
             activeOpacity={0.8}
             style={styles.depositButton}
           >
-            <Text style={styles.depositButtonText}>+ Góp quỹ</Text>
+            <Text style={[styles.depositButtonText, { color: colors.primary }]}>+ Góp quỹ</Text>
           </TouchableOpacity>
         )}
       </View>

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Image, ScrollView, StyleSheet } from 'react-native';
 import type { FamilyMember, RoleType } from '../../types';
 import { UserPlus, ShieldCheck, Heart, UserCheck } from 'lucide-react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 interface FamilyTabProps {
   members: FamilyMember[];
@@ -14,19 +15,18 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
   userRole = 'OWNER',
   onOpenInviteModal,
 }) => {
+  const { colors } = useTheme();
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>Thành Viên Gia Đình</Text>
-          <Text style={styles.subtitle}>
-            Tổ ấm: Gia đình Hạnh Phúc ({members.length} người)
-          </Text>
         </View>
         <TouchableOpacity
           onPress={onOpenInviteModal}
-          style={styles.inviteButton}
+          style={[styles.inviteButton, { backgroundColor: colors.primary, shadowColor: colors.shadow }]}
           activeOpacity={0.8}
         >
           <UserPlus size={14} color="#FFFFFF" />
@@ -35,15 +35,12 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
       </View>
 
       {/* Family Banner Card */}
-      <View style={styles.bannerCard}>
+      <View style={[styles.bannerCard, { backgroundColor: colors.primary, shadowColor: colors.shadow }]}>
         <View style={styles.bannerIconBox}>
           <Heart size={24} color="#FDA4AF" fill="#FDA4AF" />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.bannerTitle}>Gia Đình Hạnh Phúc</Text>
-          <Text style={styles.bannerSubtitle}>
-            Đồng hành tài chính & sẻ chia việc nhà mỗi ngày
-          </Text>
         </View>
       </View>
 

@@ -491,24 +491,31 @@ router.post('/', requireAuth, async (req, res, next) => {
     }
 
     let finalCategoryId = null;
-    const catInput = category_id || category_name || category_name_field;
-    if (catInput) {
-      let category = await Category.findOne({ id: catInput });
+    if (category_id) {
+      const category = await Category.findOne({ id: category_id });
       if (!category) {
-        category = await Category.findOne({ name: catInput });
-      }
-      if (!category) {
-        // Tạo mới danh mục nếu chưa có
-        category = await Category.create({
-          name: catInput,
-          type: type,
-          owner_user_id: req.user.id,
-          household_id: account.household_id || null,
-          icon: type === 'income' ? 'trending-up' : 'shopping-bag',
-          color: type === 'income' ? '#10b981' : '#f59e0b',
+        return res.status(400).json({
+          success: false,
+          message: 'Danh mục không tồn tại.',
         });
       }
-      finalCategoryId = category ? category.id : null;
+      finalCategoryId = category.id;
+    } else {
+      const nameInput = category_name || category_name_field;
+      if (nameInput) {
+        let category = await Category.findOne({ name: nameInput });
+        if (!category) {
+          category = await Category.create({
+            name: nameInput,
+            type: type,
+            owner_user_id: req.user.id,
+            household_id: account.household_id || null,
+            icon: type === 'income' ? 'trending-up' : 'shopping-bag',
+            color: type === 'income' ? '#10b981' : '#f59e0b',
+          });
+        }
+        finalCategoryId = category ? category.id : null;
+      }
     }
 
     let parsedDate = new Date();
