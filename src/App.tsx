@@ -34,6 +34,7 @@ import {
   mapUiWalletTypeToBackend,
 } from './services/api';
 import type {
+  FamilyMember,
   Transaction,
   HouseholdTask,
   AuthUser,
@@ -213,7 +214,7 @@ export function App() {
       // 2. Tải danh sách giao dịch từ MongoDB (bảng transactions)
       const transactionsRes = await api.transactions.list({ limit: 50 });
       if (transactionsRes.success && Array.isArray(transactionsRes.data)) {
-        const mappedTx = transactionsRes.data.map(mapBackendTransactionToUi);
+        const mappedTx = transactionsRes.data.map((tx) => mapBackendTransactionToUi(tx, currentUser.name));
         setTransactions(mappedTx);
       }
 
