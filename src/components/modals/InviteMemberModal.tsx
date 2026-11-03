@@ -297,7 +297,6 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                           <TouchableOpacity
                             onPress={() => handleGenerateLink(selectedRole)}
                             style={styles.refreshBtn}
-                            title="Tạo link mới"
                           >
                             <RefreshCw size={16} color="#64748B" />
                           </TouchableOpacity>
