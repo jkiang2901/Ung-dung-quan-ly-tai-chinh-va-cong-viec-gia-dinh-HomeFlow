@@ -34,18 +34,18 @@ import {
   mapUiWalletTypeToBackend,
 } from './services/api';
 import type {
-  FamilyMember,
   Transaction,
   HouseholdTask,
   AuthUser,
   Wallet,
   WalletType,
+  FamilyMember,
   CategoryBudget,
   FamilyInvitation,
   RoleType,
   UserPreferences,
 } from './types';
-import { DEFAULT_USER_PREFERENCES } from './types';
+import { DEFAULT_USER_PREFERENCES, getRoleLabel } from './types';
 
 export function App() {
   const [showSplash, setShowSplash] = useState<boolean>(true);
@@ -64,10 +64,9 @@ export function App() {
           id: currentUser.id,
           name: currentUser.name,
           role: currentUser.role,
-          roleLabel: currentUser.roleLabel,
+          roleLabel: currentUser.roleLabel || getRoleLabel(currentUser.role),
           avatar: currentUser.avatar,
           email: currentUser.email,
-          phone: currentUser.phone,
         },
       ]
     : [];
@@ -214,7 +213,9 @@ export function App() {
       // 2. Tải danh sách giao dịch từ MongoDB (bảng transactions)
       const transactionsRes = await api.transactions.list({ limit: 50 });
       if (transactionsRes.success && Array.isArray(transactionsRes.data)) {
-        const mappedTx = transactionsRes.data.map((tx) => mapBackendTransactionToUi(tx, currentUser.name));
+        const mappedTx = transactionsRes.data.map((transaction) =>
+          mapBackendTransactionToUi(transaction)
+        );
         setTransactions(mappedTx);
       }
 
