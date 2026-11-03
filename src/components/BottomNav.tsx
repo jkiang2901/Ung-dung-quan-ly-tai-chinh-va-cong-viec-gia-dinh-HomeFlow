@@ -6,6 +6,7 @@ import {
   BarChart3,
   CheckSquare,
   Plus,
+  Users,
 } from 'lucide-react-native';
 import { useTheme } from '../context/ThemeContext';
 
@@ -24,12 +25,42 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 }) => {
   const { colors } = useTheme();
 
-  const tabs = [
+  const leftTabs = [
     { id: 'home' as TabType, label: 'Trang chủ', icon: LayoutGrid },
     { id: 'wallet' as TabType, label: 'Ví tiền', icon: Wallet },
+  ];
+
+  const rightTabs = [
     { id: 'statistics' as TabType, label: 'Thống kê', icon: BarChart3 },
     { id: 'tasks' as TabType, label: 'Công việc', icon: CheckSquare },
+    { id: 'family' as TabType, label: 'Gia đình', icon: Users },
   ];
+
+  const renderTab = (tab: (typeof leftTabs)[number]) => {
+    const IconComp = tab.icon;
+    const isActive = activeTab === tab.id;
+
+    return (
+      <TouchableOpacity
+        key={tab.id}
+        onPress={() => onChangeTab(tab.id)}
+        activeOpacity={0.7}
+        style={[
+          styles.tabItem,
+          isActive && [styles.tabItemActive, { backgroundColor: colors.primary }],
+        ]}
+      >
+        <IconComp
+          size={20}
+          color={isActive ? '#FFFFFF' : '#94A3B8'}
+          strokeWidth={isActive ? 2.5 : 1.8}
+        />
+        <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
+          {tab.label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.navContainer}>
@@ -45,32 +76,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         </View>
 
         <View style={styles.tabRow}>
-          {tabs.map((t) => {
-            const IconComp = t.icon;
-            const isActive = activeTab === t.id;
-            return (
-              <TouchableOpacity
-                key={t.id}
-                onPress={() => onChangeTab(t.id)}
-                activeOpacity={0.7}
-                style={[styles.tabItem, isActive && [styles.tabItemActive, { backgroundColor: colors.primary }]]}
-              >
-                <IconComp
-                  size={20}
-                  color={isActive ? '#FFFFFF' : '#94A3B8'}
-                  strokeWidth={isActive ? 2.5 : 1.8}
-                />
-                <Text
-                  style={[
-                    styles.tabLabel,
-                    isActive && styles.tabLabelActive,
-                  ]}
-                >
-                  {t.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+          <View style={styles.tabGroup}>{leftTabs.map(renderTab)}</View>
+          <View style={styles.centerSpacer} />
+          <View style={styles.tabGroup}>{rightTabs.map(renderTab)}</View>
         </View>
       </View>
     </View>
@@ -90,11 +98,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
     paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.08,
@@ -127,16 +134,22 @@ const styles = StyleSheet.create({
   tabRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 6,
-    paddingLeft: 6,
-    paddingRight: 6,
+    flex: 1,
+  },
+  tabGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 2,
+  },
+  centerSpacer: {
+    width: 56,
   },
   tabItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
     flex: 1,
+    gap: 3,
     paddingVertical: 8,
     borderRadius: 14,
   },
