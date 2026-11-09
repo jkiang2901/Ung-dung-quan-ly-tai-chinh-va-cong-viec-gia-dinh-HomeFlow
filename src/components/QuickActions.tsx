@@ -1,12 +1,13 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { PiggyBank, ReceiptText, ArrowLeftRight, QrCode } from 'lucide-react-native';
+import { PiggyBank, ReceiptText, ArrowLeftRight, QrCode, PlusCircle } from 'lucide-react-native';
 
 interface QuickActionsProps {
   onDeposit: () => void;
   onAddExpense: () => void;
   onTransfer: () => void;
   onScanQR: () => void;
+  onAddIncome?: () => void;
 }
 
 export const QuickActions: React.FC<QuickActionsProps> = ({
@@ -14,8 +15,22 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   onAddExpense,
   onTransfer,
   onScanQR,
+  onAddIncome,
 }) => {
   const actions = [
+    ...(onAddIncome
+      ? [
+          {
+            id: 'add_income',
+            label: 'Nạp ví',
+            icon: PlusCircle,
+            bgColor: '#F0FDF4',
+            borderColor: '#BBF7D0',
+            iconColor: '#16A34A',
+            onClick: onAddIncome,
+          },
+        ]
+      : []),
     {
       id: 'deposit',
       label: 'Nộp quỹ',

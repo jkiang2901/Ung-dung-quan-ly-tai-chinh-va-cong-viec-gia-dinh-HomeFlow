@@ -81,28 +81,45 @@ export const ActionModal: React.FC<ActionModalProps> = ({
     }
   }, [type]);
 
+  const defaultPersonalWallet = activeWallets.find(
+    (w) => w.type !== 'Quỹ chung' && !w.name.toLowerCase().includes('quỹ') && !w.name.toLowerCase().includes('quy')
+  );
+
   const [fromWalletId, setFromWalletId] = useState<string>(
     (defaultWalletId && activeWallets.some((w) => w.id === defaultWalletId))
       ? defaultWalletId
       : activeWallets[1]?.id || activeWallets[0]?.id || ''
   );
   const [toWalletId, setToWalletId] = useState<string>(activeWallets[2]?.id || activeWallets[0]?.id || '');
-  const [depositSourceId, setDepositSourceId] = useState<string>(activeWallets[1]?.id || activeWallets[0]?.id || '');
+  const [depositSourceId, setDepositSourceId] = useState<string>(
+    defaultPersonalWallet ? defaultPersonalWallet.id : (activeWallets[0]?.id || '')
+  );
 
   // Tự động chọn ví hợp lệ khi danh sách ví thay đổi hoặc defaultWalletId thay đổi
   useEffect(() => {
     if (activeWallets.length > 0) {
       if (defaultWalletId && activeWallets.some((w) => w.id === defaultWalletId)) {
         setFromWalletId(defaultWalletId);
-        return;
+      } else {
+        const isValid = activeWallets.some((w) => w.id === fromWalletId);
+        if (!isValid) {
+          const realWallet = activeWallets.find((w) => !w.id.startsWith('w-'));
+          setFromWalletId(realWallet ? realWallet.id : activeWallets[0].id);
+        }
       }
-      const isValid = activeWallets.some((w) => w.id === fromWalletId);
-      if (!isValid) {
-        const realWallet = activeWallets.find((w) => !w.id.startsWith('w-'));
-        setFromWalletId(realWallet ? realWallet.id : activeWallets[0].id);
+
+      // Đảm bảo depositSourceId luôn là ví cá nhân (không phải Quỹ chung)
+      const validPersonal = activeWallets.find(
+        (w) => w.type !== 'Quỹ chung' && !w.name.toLowerCase().includes('quỹ') && !w.name.toLowerCase().includes('quy')
+      );
+      if (validPersonal) {
+        const currentDepositW = activeWallets.find((w) => w.id === depositSourceId);
+        if (!currentDepositW || currentDepositW.type === 'Quỹ chung' || currentDepositW.name.toLowerCase().includes('quỹ')) {
+          setDepositSourceId(validPersonal.id);
+        }
       }
     }
-  }, [activeWallets, defaultWalletId, fromWalletId]);
+  }, [activeWallets, defaultWalletId, fromWalletId, depositSourceId]);
 
   const [note, setNote] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);

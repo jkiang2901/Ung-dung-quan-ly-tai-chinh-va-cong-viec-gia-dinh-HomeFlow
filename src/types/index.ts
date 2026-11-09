@@ -59,6 +59,36 @@ export interface HouseholdTask {
   completed: boolean;
 }
 
+export type DebtType = 'lend' | 'borrow'; // 'lend': Cho vay (Cần thu), 'borrow': Đi vay (Phải trả)
+export type DebtStatus = 'pending' | 'partial' | 'completed'; // 'pending': Chưa trả, 'partial': Trả một phần, 'completed': Đã hoàn thành
+
+export interface DebtPayment {
+  id: string;
+  amount: number;
+  date: string;
+  note?: string;
+  walletId?: string;
+}
+
+export interface DebtItem {
+  id: string;
+  type: DebtType;
+  personName: string;
+  phoneNumber?: string;
+  amount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  startDate: string;
+  dueDate?: string;
+  note?: string;
+  status: DebtStatus;
+  walletId?: string;
+  walletName?: string;
+  payments?: DebtPayment[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface ExpenseCategory {
   name: string;
   percentage: number;

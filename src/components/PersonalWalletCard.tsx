@@ -10,6 +10,7 @@ interface PersonalWalletCardProps {
   initialHideBalance?: boolean;
   onGoToFamilyFund?: () => void;
   onDepositToFund?: () => void;
+  onAddIncome?: () => void;
 }
 
 export const PersonalWalletCard: React.FC<PersonalWalletCardProps> = ({
@@ -19,6 +20,7 @@ export const PersonalWalletCard: React.FC<PersonalWalletCardProps> = ({
   initialHideBalance = false,
   onGoToFamilyFund,
   onDepositToFund,
+  onAddIncome,
 }) => {
   const { colors } = useTheme();
   const [showBalance, setShowBalance] = useState<boolean>(!initialHideBalance);
@@ -94,16 +96,28 @@ export const PersonalWalletCard: React.FC<PersonalWalletCardProps> = ({
           <ArrowUpRight size={14} color="#6EE7B7" style={{ marginLeft: 4 }} />
         </TouchableOpacity>
 
-        {/* Quick Deposit to Fund */}
-        {onDepositToFund && (
-          <TouchableOpacity
-            onPress={onDepositToFund}
-            activeOpacity={0.8}
-            style={styles.depositButton}
-          >
-            <Text style={[styles.depositButtonText, { color: colors.primary }]}>+ Góp quỹ</Text>
-          </TouchableOpacity>
-        )}
+        {/* Action Buttons: Nạp ví & Góp quỹ */}
+        <View style={styles.actionButtonGroup}>
+          {onAddIncome && (
+            <TouchableOpacity
+              onPress={onAddIncome}
+              activeOpacity={0.8}
+              style={styles.incomeButton}
+            >
+              <Text style={styles.incomeButtonText}>+ Nạp ví</Text>
+            </TouchableOpacity>
+          )}
+
+          {onDepositToFund && (
+            <TouchableOpacity
+              onPress={onDepositToFund}
+              activeOpacity={0.8}
+              style={styles.depositButton}
+            >
+              <Text style={[styles.depositButtonText, { color: colors.primary }]}>Góp quỹ</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -232,6 +246,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   fundAmountText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  actionButtonGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  incomeButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+  },
+  incomeButtonText: {
     fontSize: 12,
     fontWeight: '800',
     color: '#FFFFFF',
