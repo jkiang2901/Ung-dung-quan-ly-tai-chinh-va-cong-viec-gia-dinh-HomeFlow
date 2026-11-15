@@ -1,13 +1,14 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AdminLayout } from './components/layout/AdminLayout';
+import { DashboardOverview } from './pages/DashboardOverview';
 
 export const App: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<AdminLayout />}>
-          <Route index element={<div className="p-8 text-center text-slate-500">HomeFlow Admin Dashboard</div>} />
+          <Route index element={<DashboardOverview />} />
         </Route>
       </Routes>
     </BrowserRouter>
