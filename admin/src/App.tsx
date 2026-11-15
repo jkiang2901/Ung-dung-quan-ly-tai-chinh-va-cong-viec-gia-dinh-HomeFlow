@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AdminLayout } from './components/layout/AdminLayout';
 import { DashboardOverview } from './pages/DashboardOverview';
+import { UsersManagement } from './pages/UsersManagement';
 
 export const App: React.FC = () => {
   return (
@@ -9,6 +10,7 @@ export const App: React.FC = () => {
       <Routes>
         <Route path="/" element={<AdminLayout />}>
           <Route index element={<DashboardOverview />} />
+          <Route path="users" element={<UsersManagement />} />
         </Route>
       </Routes>
     </BrowserRouter>
