@@ -4,6 +4,7 @@ import { AdminLayout } from './components/layout/AdminLayout';
 import { DashboardOverview } from './pages/DashboardOverview';
 import { UsersManagement } from './pages/UsersManagement';
 import { HouseholdsManagement } from './pages/HouseholdsManagement';
+import { TransactionsManagement } from './pages/TransactionsManagement';
 
 export const App: React.FC = () => {
   return (
@@ -13,6 +14,7 @@ export const App: React.FC = () => {
           <Route index element={<DashboardOverview />} />
           <Route path="users" element={<UsersManagement />} />
           <Route path="households" element={<HouseholdsManagement />} />
+          <Route path="transactions" element={<TransactionsManagement />} />
         </Route>
       </Routes>
     </BrowserRouter>
