@@ -7,6 +7,7 @@ import { HouseholdsManagement } from './pages/HouseholdsManagement';
 import { TransactionsManagement } from './pages/TransactionsManagement';
 import { DebtsManagement } from './pages/DebtsManagement';
 import { TasksManagement } from './pages/TasksManagement';
+import { AnalyticsReports } from './pages/AnalyticsReports';
 
 export const App: React.FC = () => {
   return (
@@ -19,6 +20,7 @@ export const App: React.FC = () => {
           <Route path="transactions" element={<TransactionsManagement />} />
           <Route path="debts" element={<DebtsManagement />} />
           <Route path="tasks" element={<TasksManagement />} />
+          <Route path="reports" element={<AnalyticsReports />} />
         </Route>
       </Routes>
     </BrowserRouter>
