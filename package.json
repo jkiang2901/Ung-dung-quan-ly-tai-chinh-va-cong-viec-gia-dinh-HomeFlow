@@ -7,13 +7,15 @@
     "start": "expo start",
     "dev": "node --watch server/src/index.js",
     "install:server": "cd server && npm install",
-    "install:all": "npm install && cd server && npm install",
+    "install:all": "npm install && cd server && npm install && cd ../admin && npm install",
     "server": "node server/src/index.js",
     "server:dev": "node --watch server/src/index.js",
     "server:test": "cd server && npm test",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "admin": "npm --prefix admin run dev",
+    "admin:build": "npm --prefix admin run build",
     "lint": "oxlint"
   },
   "dependencies": {

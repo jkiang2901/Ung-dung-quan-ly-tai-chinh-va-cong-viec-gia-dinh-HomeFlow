@@ -137,8 +137,8 @@ Mở `server/.env` và điền thông tin:
 
 ```env
 PORT=5000
-MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.kotp36b.mongodb.net/homeflow?retryWrites=true&w=majority
-JWT_SECRET=homeflow_super_secret_jwt_key_2026
+MONGODB_URI=mongodb://127.0.0.1:27017/homeflow
+JWT_SECRET=replace_with_a_long_random_secret
 JWT_EXPIRES_IN=7d
 ```
 
@@ -170,6 +170,23 @@ npm start        # Expo Metro Bundler (quét QR bằng Expo Go)
 npm run android  # Android Emulator
 ```
 
+#### 🛡️ Terminal 3 — Admin Dashboard (tùy chọn)
+
+Thêm email tài khoản quản trị vào `ADMIN_EMAILS` trong `server/.env` (nhiều email phân cách bằng dấu phẩy). Đây là allowlist quản trị toàn hệ thống; vai trò admin trong hộ gia đình không tự cấp quyền này.
+
+```bash
+cp admin/.env.example admin/.env
+npm run admin
+```
+
+Mở `http://localhost:3000`, đăng nhập bằng tài khoản HomeFlow có email nằm trong allowlist. Dashboard quản trị được bảo vệ bởi JWT và API `/api/admin`; dữ liệu được đọc/lưu trực tiếp trên MongoDB. Chỉ tài khoản quản trị được phép tải bản xuất dữ liệu.
+
+Tạo bản build production:
+
+```bash
+npm run admin:build
+```
+
 ---
 
 ## 📜 Các Lệnh Hữu Ích
@@ -183,6 +200,8 @@ npm run android  # Android Emulator
 | `npm start` | Khởi động Expo (Mobile + Web) |
 | `npm run android` | Chạy trên Android Emulator |
 | `npm run ios` | Chạy trên iOS Simulator |
+| `npm run admin` | Chạy dashboard quản trị trên Web |
+| `npm run admin:build` | Kiểm tra TypeScript và build dashboard quản trị |
 | `npm run lint` | Kiểm tra lỗi code style (oxlint) |
 
 ---
@@ -412,11 +431,11 @@ npm run install:all
 2. Mở file [server/.env](file:///d:/HomeFlow/server/.env) và điền mật khẩu Database của nhóm:
    ```env
    PORT=5000
-   MONGODB_URI=mongodb+srv://giang6363:<db_password>@cluster0.kotp36b.mongodb.net/homeflow?retryWrites=true&w=majority&compressors=zlib
-   JWT_SECRET=homeflow_super_secret_jwt_key_2026
+   MONGODB_URI=mongodb://127.0.0.1:27017/homeflow
+   JWT_SECRET=replace_with_a_long_random_secret
    JWT_EXPIRES_IN=7d
    ```
-   *(Thay `<db_password>` bằng mật khẩu MongoDB Atlas thật)*
+   *(Thay URI MongoDB và JWT secret bằng giá trị riêng của môi trường triển khai)*
 
 > ⚠️ **LƯU Ý QUAN TRỌNG VỀ MONGODB ATLAS**:
 > Nếu thành viên chạy bị lỗi kết nối `MongooseServerSelectionError` hoặc `IP not whitelisted`, chủ tài khoản MongoDB Atlas cần vào:

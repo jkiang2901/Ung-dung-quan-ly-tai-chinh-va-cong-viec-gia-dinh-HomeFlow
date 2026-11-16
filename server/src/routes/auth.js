@@ -3,8 +3,11 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { Profile } from '../models/Profile.js';
 import { requireAuth } from '../middleware/auth.js';
+import { AdminSetting } from '../models/AdminSetting.js';
 
 const router = express.Router();
+const failedLogins = new Map();
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 
 const generateToken = (userId, email) => {
   return jwt.sign(
@@ -80,8 +83,30 @@ router.post('/login', async (req, res, next) => {
       });
     }
 
-    const user = await Profile.findOne({ email: email.toLowerCase().trim() }).select('+password_hash');
+    const normalizedEmail = email.toLowerCase().trim();
+    const attemptKey = `${req.ip}:${normalizedEmail}`;
+    if (failedLogins.size > 10000) {
+      for (const [key, value] of failedLogins) {
+        if (Date.now() - value.startedAt >= LOGIN_WINDOW_MS) failedLogins.delete(key);
+      }
+    }
+    const currentAttempt = failedLogins.get(attemptKey);
+    if (currentAttempt && Date.now() - currentAttempt.startedAt >= LOGIN_WINDOW_MS) failedLogins.delete(attemptKey);
+    const attempt = failedLogins.get(attemptKey);
+    const settings = await AdminSetting.findOne({ key: 'system' }).select('value.security.maxLoginAttempts').lean();
+    const configuredLimit = Number(settings?.value?.security?.maxLoginAttempts || process.env.MAX_LOGIN_ATTEMPTS || 5);
+    const attemptLimit = Number.isInteger(configuredLimit) ? Math.min(Math.max(configuredLimit, 1), 20) : 5;
+    if (attempt && attempt.count >= attemptLimit) {
+      return res.status(429).json({
+        success: false,
+        message: 'Đăng nhập tạm thời bị khóa do nhập sai quá nhiều lần. Thử lại sau 15 phút.',
+      });
+    }
+
+    const user = await Profile.findOne({ email: normalizedEmail }).select('+password_hash');
     if (!user) {
+      const previous = failedLogins.get(attemptKey);
+      failedLogins.set(attemptKey, { count: (previous?.count || 0) + 1, startedAt: previous?.startedAt || Date.now() });
       return res.status(401).json({
         success: false,
         message: 'Email hoặc mật khẩu không chính xác',
@@ -90,12 +115,21 @@ router.post('/login', async (req, res, next) => {
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
+      const previous = failedLogins.get(attemptKey);
+      failedLogins.set(attemptKey, { count: (previous?.count || 0) + 1, startedAt: previous?.startedAt || Date.now() });
       return res.status(401).json({
         success: false,
         message: 'Email hoặc mật khẩu không chính xác',
       });
     }
 
+    failedLogins.delete(attemptKey);
+    if (user.is_banned) {
+      return res.status(403).json({
+        success: false,
+        message: 'Tài khoản đã bị quản trị viên khóa.',
+      });
+    }
     const token = generateToken(user.id, user.email);
 
     res.json({
