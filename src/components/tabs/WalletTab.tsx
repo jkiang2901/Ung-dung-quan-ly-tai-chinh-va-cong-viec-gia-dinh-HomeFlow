@@ -95,8 +95,15 @@ export const WalletTab: React.FC<WalletTabProps> = ({
     };
   });
 
-  const activeWallets = wallets.filter((w) => w.active);
-  const totalWalletBalance = activeWallets.reduce((sum, w) => sum + w.balance, 0);
+  // Danh sách các ví tiền cá nhân / ví con (độc lập hoàn toàn với Quỹ gia đình chung)
+  const personalWallets = wallets.filter(
+    (w) =>
+      w.active &&
+      w.type !== 'Quỹ chung' &&
+      !w.name.toLowerCase().includes('quỹ') &&
+      !w.name.toLowerCase().includes('quy')
+  );
+  const totalPersonalBalance = personalWallets.reduce((sum, w) => sum + (w.balance || 0), 0);
 
   const getWalletIcon = (type: string) => {
     switch (type) {
@@ -256,13 +263,13 @@ export const WalletTab: React.FC<WalletTabProps> = ({
         </View>
       </View>
 
-      {/* 4. Quản lý hệ thống các Ví tiền */}
+      {/* 4. Quản lý hệ thống các Ví tiền (Độc lập với Quỹ gia đình chung) */}
       <View style={styles.sectionCard}>
         <View style={styles.sectionHeader}>
           <View>
-            <Text style={styles.sectionTitle}>Danh sách ví tiền ({activeWallets.length})</Text>
+            <Text style={styles.sectionTitle}>Danh sách ví tiền ({personalWallets.length})</Text>
             <Text style={styles.sectionSubtitle}>
-              Tổng tiền khả dụng: {formatMoney(totalWalletBalance)} đ
+              Tổng tiền khả dụng: {formatMoney(totalPersonalBalance)} đ
             </Text>
           </View>
           {userRole !== 'VIEWER' && (
@@ -274,7 +281,7 @@ export const WalletTab: React.FC<WalletTabProps> = ({
         </View>
 
         <View style={styles.subWalletList}>
-          {activeWallets.map((w) => {
+          {personalWallets.map((w) => {
             const iconConfig = getWalletIcon(w.type);
             const IconComp = iconConfig.icon;
 
@@ -306,15 +313,13 @@ export const WalletTab: React.FC<WalletTabProps> = ({
                       <Edit2 size={16} color="#056839" />
                     </TouchableOpacity>
 
-                    {w.type !== 'Quỹ chung' && (
-                      <TouchableOpacity
-                        onPress={() => onOpenDeleteWallet(w)}
-                        style={styles.iconBtn}
-                        activeOpacity={0.7}
-                      >
-                        <Trash2 size={16} color="#DC2626" />
-                      </TouchableOpacity>
-                    )}
+                    <TouchableOpacity
+                      onPress={() => onOpenDeleteWallet(w)}
+                      style={styles.iconBtn}
+                      activeOpacity={0.7}
+                    >
+                      <Trash2 size={16} color="#DC2626" />
+                    </TouchableOpacity>
                   </View>
                 )}
               </View>

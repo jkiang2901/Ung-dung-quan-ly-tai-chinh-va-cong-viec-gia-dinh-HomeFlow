@@ -779,6 +779,7 @@ router.post('/transfer', requireAuth, async (req, res, next) => {
     await Transaction.create({
       account_id: from_account_id,
       user_id: req.user.id,
+      household_id: fromAccess.account.household_id || null,
       amount: parsedAmount + parsedFee,
       type: 'expense',
       note: `Chuyển đến ví ${toAccess.account.name}: ${note || ''}`.trim(),
@@ -791,6 +792,7 @@ router.post('/transfer', requireAuth, async (req, res, next) => {
     await Transaction.create({
       account_id: to_account_id,
       user_id: req.user.id,
+      household_id: toAccess.account.household_id || null,
       amount: parsedAmount,
       type: 'income',
       note: `Nhận từ ví ${fromAccess.account.name}: ${note || ''}`.trim(),

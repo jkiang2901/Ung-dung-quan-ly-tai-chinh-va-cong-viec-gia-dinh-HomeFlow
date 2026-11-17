@@ -27,8 +27,13 @@ export const mapUiWalletTypeToBackend = (type: WalletType): 'cash' | 'bank' | 'e
 };
 
 export const mapBackendAccountToWallet = (acc: any, ownerName: string = 'Tôi'): Wallet => {
+  const isFund = Boolean(
+    acc.household_id ||
+    (acc.name && (acc.name.toLowerCase().includes('quỹ') || acc.name.toLowerCase().includes('quy')))
+  );
+
   let uiType: WalletType = 'Khác';
-  if (acc.household_id) {
+  if (isFund) {
     uiType = 'Quỹ chung';
   } else {
     switch (acc.type) {
@@ -44,10 +49,10 @@ export const mapBackendAccountToWallet = (acc: any, ownerName: string = 'Tôi'):
     id: acc.id,
     name: acc.name,
     type: uiType,
-    balance: acc.balance !== undefined ? acc.balance : (acc.initial_balance || 0),
-    initialBalance: acc.initial_balance || 0,
+    balance: acc.balance !== undefined ? Number(acc.balance) : (Number(acc.initial_balance) || 0),
+    initialBalance: Number(acc.initial_balance) || 0,
     ownerId: acc.owner_user_id || undefined,
-    ownerName: acc.household_id ? 'Gia đình' : ownerName,
+    ownerName: isFund ? 'Gia đình' : ownerName,
     active: !acc.is_archived,
     createdAt: acc.created_at ? new Date(acc.created_at).toLocaleDateString('vi-VN') : undefined,
   };
@@ -55,24 +60,39 @@ export const mapBackendAccountToWallet = (acc: any, ownerName: string = 'Tôi'):
 
 export const mapBackendTransactionToUi = (t: any, userName: string = 'Tôi'): Transaction => {
   const isTransfer = Boolean(t.is_transfer);
+  const noteLower = (t.note || '').toLowerCase();
+  const catLower = (t.category_name || '').toLowerCase();
+
+  const isFundAction =
+    noteLower.includes('quỹ') ||
+    noteLower.includes('quy') ||
+    noteLower.includes('đóng góp') ||
+    noteLower.includes('dong gop') ||
+    noteLower.includes('góp quỹ') ||
+    noteLower.includes('nộp quỹ') ||
+    catLower.includes('quỹ') ||
+    catLower.includes('quy') ||
+    catLower.includes('đóng góp');
+
   let uiType: 'expense' | 'income' | 'transfer' | 'contribution' = t.type === 'expense' ? 'expense' : 'income';
-  if (isTransfer) {
-    uiType = 'transfer';
-  } else if (t.category_name && t.category_name.toLowerCase().includes('đóng góp')) {
+
+  if (isFundAction) {
     uiType = 'contribution';
+  } else if (isTransfer) {
+    uiType = 'transfer';
   }
 
   return {
     id: t.id,
-    title: t.note || (isTransfer ? 'Chuyển tiền nội bộ' : (t.type === 'expense' ? 'Khoản chi tiêu' : 'Khoản thu nhập')),
+    title: t.note || (isFundAction ? 'Góp quỹ gia đình' : (isTransfer ? 'Chuyển tiền nội bộ' : (t.type === 'expense' ? 'Khoản chi tiêu' : 'Khoản thu nhập'))),
     user: t.user_name || (t.user_id ? userName : 'Tôi'),
     userId: t.user_id,
     time: t.transaction_date ? new Date(t.transaction_date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : 'Vừa xong',
     date: t.transaction_date ? new Date(t.transaction_date).toLocaleDateString('vi-VN') : undefined,
     amount: t.type === 'expense' ? -Math.abs(t.amount) : Math.abs(t.amount),
     type: uiType,
-    category: t.category_name || (isTransfer ? 'Chuyển ví' : (t.type === 'expense' ? 'Chi tiêu' : 'Thu nhập')),
-    iconType: isTransfer ? 'transfer' : (t.type === 'expense' ? 'shopping' : 'salary'),
+    category: t.category_name || (isFundAction ? 'Đóng góp quỹ' : (isTransfer ? 'Chuyển ví' : (t.type === 'expense' ? 'Chi tiêu' : 'Thu nhập'))),
+    iconType: isFundAction ? 'transfer' : (isTransfer ? 'transfer' : (t.type === 'expense' ? 'shopping' : 'salary')),
     sourceWalletId: t.account_id,
     sourceWalletName: t.account_name,
     destinationWalletId: t.destination_account_id,
@@ -415,7 +435,85 @@ class ApiService {
         method: 'DELETE',
       }),
   };
+
+  // --- 7. CÔNG NỢ (DEBTS) API ---
+  debts = {
+    list: (params?: { type?: string; status?: string }) => {
+      const query = new URLSearchParams();
+      if (params?.type) query.append('type', params.type);
+      if (params?.status) query.append('status', params.status);
+      const qStr = query.toString();
+      return this.request<{ success: boolean; data: any[] }>(`/debts${qStr ? `?${qStr}` : ''}`);
+    },
+    create: (payload: {
+      type: 'lend' | 'borrow';
+      person_name: string;
+      phone_number?: string;
+      amount: number;
+      start_date?: string;
+      due_date?: string;
+      note?: string;
+      wallet_id?: string;
+      affect_wallet?: boolean;
+    }) =>
+      this.request<{ success: boolean; message: string; data: any }>('/debts', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    pay: (
+      id: string,
+      payload: {
+        amount: number;
+        note?: string;
+        wallet_id?: string;
+        affect_wallet?: boolean;
+      }
+    ) =>
+      this.request<{ success: boolean; message: string; data: any }>(`/debts/${id}/pay`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    update: (id: string, payload: any) =>
+      this.request<{ success: boolean; message: string; data: any }>(`/debts/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      }),
+    delete: (id: string) =>
+      this.request<{ success: boolean; message: string }>(`/debts/${id}`, {
+        method: 'DELETE',
+      }),
+  };
 }
+
+export const mapBackendDebtToUi = (d: any): import('../types').DebtItem => ({
+  id: d.id,
+  type: d.type,
+  personName: d.person_name,
+  phoneNumber: d.phone_number || '',
+  amount: d.amount || 0,
+  paidAmount: d.paid_amount || 0,
+  remainingAmount:
+    d.remaining_amount !== undefined
+      ? d.remaining_amount
+      : Math.max(0, (d.amount || 0) - (d.paid_amount || 0)),
+  startDate: d.start_date ? new Date(d.start_date).toLocaleDateString('vi-VN') : '',
+  dueDate: d.due_date ? new Date(d.due_date).toLocaleDateString('vi-VN') : undefined,
+  note: d.note || '',
+  status: d.status || 'pending',
+  walletId: d.wallet_id || undefined,
+  walletName: d.wallet_name || undefined,
+  payments: Array.isArray(d.payments)
+    ? d.payments.map((p: any) => ({
+        id: p.id,
+        amount: p.amount,
+        date: p.date ? new Date(p.date).toLocaleDateString('vi-VN') : '',
+        note: p.note || '',
+        walletId: p.wallet_id || undefined,
+      }))
+    : [],
+  createdAt: d.created_at ? new Date(d.created_at).toLocaleDateString('vi-VN') : undefined,
+  updatedAt: d.updated_at ? new Date(d.updated_at).toLocaleDateString('vi-VN') : undefined,
+});
 
 export const mapBackendTaskToUi = (t: any): import('../types').HouseholdTask => ({
   id: t.id,

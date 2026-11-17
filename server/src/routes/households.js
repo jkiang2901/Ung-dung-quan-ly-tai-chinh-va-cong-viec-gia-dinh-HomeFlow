@@ -4,6 +4,7 @@ import { Household } from '../models/Household.js';
 import { HouseholdMember } from '../models/HouseholdMember.js';
 import { HouseholdInvitation } from '../models/HouseholdInvitation.js';
 import { Profile } from '../models/Profile.js';
+import { Account } from '../models/Account.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -62,6 +63,16 @@ router.post('/', requireAuth, async (req, res, next) => {
       user_id: req.user.id,
       role: 'owner',
       status: 'active',
+    });
+
+    // Tạo sẵn ví Quỹ gia đình chung trong collection accounts
+    await Account.create({
+      name: 'Quỹ gia đình chung',
+      type: 'bank',
+      initial_balance: 0,
+      currency: currency || 'VND',
+      household_id: newHousehold.id,
+      owner_user_id: null,
     });
 
     res.status(201).json({

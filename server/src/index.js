@@ -12,6 +12,7 @@ import transactionRoutes from './routes/transactions.js';
 import householdRoutes from './routes/households.js';
 import taskRoutes from './routes/tasks.js';
 import adminRoutes from './routes/admin.js';
+import debtRoutes from './routes/debts.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -62,6 +63,7 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/households', householdRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/debts', debtRoutes);
 
 // Error handling middleware
 app.use(errorHandler);
