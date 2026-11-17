@@ -105,4 +105,3 @@ DebtSchema.methods.toJSON = function () {
 };
 
 export const Debt = mongoose.model('Debt', DebtSchema);
-

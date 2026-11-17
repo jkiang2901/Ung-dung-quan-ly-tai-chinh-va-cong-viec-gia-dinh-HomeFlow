@@ -35,6 +35,11 @@ const profileSchema = new mongoose.Schema(
       default: null,
       trim: true,
     },
+    is_banned: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
     timezone: {
       type: String,
       default: 'Asia/Ho_Chi_Minh',

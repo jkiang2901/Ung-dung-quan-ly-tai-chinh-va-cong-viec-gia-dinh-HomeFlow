@@ -7,14 +7,19 @@ Hệ thống API backend cho ứng dụng quản lý tài chính và công việ
 ## 1. Cấu hình Connection String MongoDB Atlas
 
 1. Mở file [server/.env](file:///d:/HomeFlow/server/.env) (hoặc copy từ [server/.env.example](file:///d:/HomeFlow/server/.env.example)).
-2. Thay thế `<db_password>` bằng mật khẩu Database User MongoDB Atlas của bạn:
+2. Cập nhật `MONGODB_URI` và `JWT_SECRET` theo môi trường triển khai:
 
 ```env
 PORT=5000
-MONGODB_URI=mongodb+srv://giang6363:<db_password>@cluster0.kotp36b.mongodb.net/homeflow?retryWrites=true&w=majority&compressors=zlib
-JWT_SECRET=homeflow_super_secret_jwt_key_2026
+MONGODB_URI=mongodb://127.0.0.1:27017/homeflow
+JWT_SECRET=replace_with_a_long_random_secret
 JWT_EXPIRES_IN=7d
+ADMIN_EMAILS=admin@example.com
 ```
+
+`ADMIN_EMAILS` là danh sách email được phép dùng API quản trị, phân cách bằng dấu phẩy. Chỉ tài khoản đã đăng ký/đăng nhập và có email trong danh sách mới truy cập được `/api/admin`. Không dùng vai trò admin của hộ gia đình thay cho quyền quản trị hệ thống. Có thể cấu hình thêm giới hạn IP trong Admin → Cài đặt; hãy thêm IP hiện tại trước khi lưu để tránh tự khóa.
+
+Các thiết lập email, push, Telegram và 2FA chưa có dịch vụ/provider tích hợp. Dashboard không hiển thị thành công giả cho các thao tác đó; sao lưu hiện tải JSON các collection và không thay thế MongoDB Atlas snapshot.
 
 > **Lưu ý**: Database chỉ định là `/homeflow`. Đảm bảo trong MongoDB Atlas mục **Network Access** đã cho phép IP máy của bạn (hoặc `0.0.0.0/0` khi phát triển).
 
